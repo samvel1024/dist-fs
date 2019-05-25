@@ -1,0 +1,5 @@
+add_library(Err err.cpp err.h commons.h commons.cpp)
+add_executable(server server.cpp)
+add_executable(client client.cpp)
+target_link_libraries(client Err)
+target_link_libraries(server Err)
