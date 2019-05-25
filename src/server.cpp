@@ -9,101 +9,59 @@
 #include <sys/socket.h>
 #include <fcntl.h>
 #include <netdb.h>
-
+#include <string>
+#include <iostream>
 #include "err.h"
 
 #define BSIZE         1024
 #define REPEAT_COUNT  30
 #define BUFSIZE 1024
 
+int TRY(int val, const char *msg) {
+	if (val < 0) syserr(msg);
+	return val;
+}
 
-#define PORT 10001
-
-int main(int argc, char *argv[]) {
-	/* argumenty wywoĹania programu */
-	char *multicast_dotted_address;
-	in_port_t local_port;
-
-	/* zmienne i struktury opisujÄce gniazda */
-	int sock;
-	struct sockaddr_in local_address, clientaddr;
-	unsigned int remote_len;
-	struct ip_mreq ip_mreq;
-
-	/* zmienne obsĹugujÄce komunikacjÄ */
-	char buffer[BSIZE];
-	ssize_t rcv_len;
-	time_t time_buffer;
-	int i;
-
-	/* parsowanie argumentĂłw programu */
-	if (argc != 3)
-		fatal("Usage: %s multicast_dotted_address local_port\n", argv[0]);
-	multicast_dotted_address = argv[1];
-	local_port = (in_port_t) atoi(argv[2]);
-
-	/* otworzenie gniazda */
-	sock = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sock < 0)
-		syserr("socket");
+int connect_group(in_port_t port, char *addr) {
+	int sock = TRY(socket(AF_INET, SOCK_DGRAM, 0), "socket");
 	u_int yes = 1;
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, (char *) &yes, sizeof(yes)) < 0) {
-		perror("Reusing ADDR failed");
-		return 1;
-	}
-	/* podpiÄcie siÄ do grupy rozsyĹania (ang. multicast) */
+	TRY(setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, (char *) &yes, sizeof(yes)), "reuse");
+	//Connect to group
+	struct ip_mreq ip_mreq{};
 	ip_mreq.imr_interface.s_addr = htonl(INADDR_ANY);
-	if (inet_aton(multicast_dotted_address, &ip_mreq.imr_multiaddr) == 0)
-		syserr("inet_aton");
-	if (setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void *) &ip_mreq, sizeof ip_mreq) < 0)
-		syserr("setsockopt");
-
-	/* podpiÄcie siÄ pod lokalny adres i port */
+	TRY(inet_aton(addr, &ip_mreq.imr_multiaddr) == 0, "inet_aton");
+	TRY(setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (void *) &ip_mreq, sizeof ip_mreq), "setsockopt");
+	//Bind to port
+	struct sockaddr_in local_address{};
 	local_address.sin_family = AF_INET;
 	local_address.sin_addr.s_addr = htonl(INADDR_ANY);
-	local_address.sin_port = htons(local_port);
+	local_address.sin_port = htons(port);
 	if (bind(sock, (struct sockaddr *) &local_address, sizeof local_address) < 0)
 		syserr("bind");
-	struct hostent *hostp; /* client host info */
+	return sock;
+}
 
 
+int main(int argc, char *argv[]) {
+	if (argc != 3)
+		fatal("Usage: %s multicast_dotted_address local_port\n", argv[0]);
+	int sock = connect_group(atoi(argv[2]), argv[1]);
+	struct sockaddr_in clientaddr;
 	unsigned clientlen; /* byte size of client's address */
-	char buf[BUFSIZE]; /* message buf */
-	char *hostaddrp; /* dotted decimal host addr string */
-	int n; /* message byte size */
+	std::string buf(BUFSIZE, '\0'); /* message buf */
 	clientlen = sizeof(clientaddr);
-	for (int i = 0; i < 3; ++i) {
-
-		/*
-		 * recvfrom: receive a UDP datagram from a client
-		 */
-		bzero(buf, BUFSIZE);
-		n = recvfrom(sock, buf, BUFSIZE, 0,
-		             (struct sockaddr *) &clientaddr, &clientlen);
-		if (n < 0)
-			syserr("ERROR in recvfrom");
-
-		/*
-		 * gethostbyaddr: determine who sent the datagram
-		 */
-		printf("server received %lu/%d bytes: %s\n", strlen(buf), n, buf);
-
-		/*
-		 * sendto: echo the input back to the client
-		 */
-		char *bik = "PIZDEEC";
-		n = sendto(sock, bik, strlen(bik), 0,
-		           (struct sockaddr *) &clientaddr, clientlen);
-		if (n < 0)
-			syserr("ERROR in sendto");
+	int pid = getpid();
+	printf("[%d] Listening\n", pid);
+	for (int i = 0; i < 2; ++i) {
+		bzero(&buf[0], BUFSIZE);
+		TRY(recvfrom(sock, &buf[0], BUFSIZE, 0,
+		             (struct sockaddr *) &clientaddr, &clientlen), "Error in recvfrom");
+		std::cout << "[" << pid << "]" << "Server received:" << buf << std::endl << std::endl;
+		std::string resp = "HELLO WORLD";
+		TRY(sendto(sock, &resp[0], resp.size(), 0, (struct sockaddr *) &clientaddr, clientlen), "Error in sendto");
 	}
-	/* w taki sposĂłb moĹźna odpiÄÄ siÄ od grupy rozsyĹania */
-	if (setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, (void *) &ip_mreq, sizeof ip_mreq) < 0)
-		syserr("setsockopt");
-
-	/* koniec */
+	struct ip_mreq ip_mreq;
+//	TRY(setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, (void *) &ip_mreq, sizeof ip_mreq), "setsockopt");
 	close(sock);
 	exit(EXIT_SUCCESS);
 }
-
-// fcntl(sd, F_SETFL, O_NONBLOCK); 

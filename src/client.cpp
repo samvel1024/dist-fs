@@ -14,7 +14,7 @@
 
 #define BSIZE         256
 #define TTL_VALUE     4
-#define REPEAT_COUNT  3
+#define REPEAT_COUNT  1
 #define SLEEP_TIME    5
 
 #define PORT 10001
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
 	/* radosne rozgĹaszanie czasu */
 	ssize_t rcv_len;
 	for (i = 0; i < REPEAT_COUNT; ++i) {
-		printf("Sending request...\n");
+		printf("Sending request to %d server\n", count);
 		bzero(buffer, BSIZE);
 		strncpy(buffer, "GET_TIME", BSIZE);
 		length = strnlen(buffer, BSIZE);
@@ -104,7 +104,6 @@ int main(int argc, char *argv[]) {
 				printf("Didn't get any response. Repeating request.\n");
 			} else {
 				printf("Time: %.*s\n", (int) rcv_len, buffer);
-				break;
 			}
 		}
 	}
