@@ -12,9 +12,9 @@ class TCPSession : public Subscriber {
 
 private:
 	static constexpr int BUFLEN = 2048;
-	char buffer[BUFLEN];
-	int buf_sent;
-	int buf_size;
+	char buffer[BUFLEN]{};
+	int buf_sent{};
+	int buf_size{};
 
 public:
 

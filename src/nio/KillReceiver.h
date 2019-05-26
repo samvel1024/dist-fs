@@ -4,6 +4,7 @@
 
 #ifndef DISTFS_KILLRECEIVER_H
 #define DISTFS_KILLRECEIVER_H
+#ifdef __linux__
 
 
 #include "Subscriber.h"
@@ -18,5 +19,5 @@ public:
 	KillReceiver();
 };
 
-
+#endif
 #endif //DISTFS_KILLRECEIVER_H

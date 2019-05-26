@@ -33,7 +33,7 @@ public:
 
 	void set_expected(short mmask);
 
-	Subscriber(const std::string &name);
+	Subscriber(std::string name);
 };
 
 #endif //DISTFS_SUBSCRIBER_H

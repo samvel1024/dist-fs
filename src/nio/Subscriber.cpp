@@ -1,3 +1,5 @@
+#include <utility>
+
 //
 // Created by Samvel Abrahamyan on 2019-05-26.
 //
@@ -34,5 +36,5 @@ void Subscriber::set_expected(short mmask) {
 	this->expected = mmask;
 }
 
-Subscriber::Subscriber(const std::string &name) : name(name) {}
+Subscriber::Subscriber(std::string name) : name(std::move(name)) {}
 

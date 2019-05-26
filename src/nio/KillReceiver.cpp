@@ -1,7 +1,7 @@
 //
 // Created by Samvel Abrahamyan on 2019-05-26.
 //
-
+#ifdef __linux__
 #include <signal.h>
 #include "KillReceiver.h"
 #include "util.h"
@@ -25,3 +25,4 @@ KillReceiver::KillReceiver() : Subscriber("KillReceiver") {
 	set_fd(fd);
 	set_expected(POLLIN | POLLERR | POLLHUP);
 }
+#endif
