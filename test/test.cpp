@@ -4,6 +4,4 @@
 #include "../src/commons.h"
 
 
-BOOST_AUTO_TEST_CASE(PassTest) {
-//	auto guard = fd_guard<fd_closer>(3, close);
-}
+BOOST_AUTO_TEST_CASE(PassTest) {}

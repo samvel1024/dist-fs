@@ -11,11 +11,14 @@
 #include <netdb.h>
 #include <string>
 #include <iostream>
+#include <poll.h>
 #include "err.h"
 
 #define BSIZE         1024
 #define REPEAT_COUNT  30
 #define BUFSIZE 1024
+
+
 
 int TRY(int val, const char *msg) {
 	if (val < 0) syserr(msg);
@@ -38,6 +41,7 @@ int connect_group(in_port_t port, char *addr) {
 	local_address.sin_port = htons(port);
 	if (bind(sock, (struct sockaddr *) &local_address, sizeof local_address) < 0)
 		syserr("bind");
+	fcntl(sock, F_SETFL, O_NONBLOCK);
 	return sock;
 }
 
@@ -60,8 +64,4 @@ int main(int argc, char *argv[]) {
 		std::string resp = "HELLO WORLD";
 		TRY(sendto(sock, &resp[0], resp.size(), 0, (struct sockaddr *) &clientaddr, clientlen), "Error in sendto");
 	}
-	struct ip_mreq ip_mreq;
-//	TRY(setsockopt(sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, (void *) &ip_mreq, sizeof ip_mreq), "setsockopt");
-	close(sock);
-	exit(EXIT_SUCCESS);
 }
