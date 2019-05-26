@@ -23,6 +23,8 @@ public:
 	void on_output(Poll &p) override;
 
 	~TCPSession() override = default;
+
+	explicit TCPSession(std::string nm);
 };
 
 class TCPServer : public Subscriber {
@@ -35,7 +37,7 @@ public:
 
 	~TCPServer() override = default;
 
-	explicit TCPServer(int port = 0);
+	explicit TCPServer(std::string nm, int port = 0);
 };
 
 

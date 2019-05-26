@@ -1,5 +1,5 @@
 add_library(Err err.cpp err.h commons.h commons.cpp)
-add_library(Nio nio/util.h nio/util.cpp nio/Poll.cpp nio/Poll.h nio/TCPServer.cpp nio/TCPServer.h nio/Subscriber.cpp nio/Subscriber.h)
+add_library(Nio nio/util.h nio/util.cpp nio/Poll.cpp nio/Poll.h nio/TCPServer.cpp nio/TCPServer.h nio/Subscriber.cpp nio/Subscriber.h nio/KillReceiver.cpp nio/KillReceiver.h)
 add_executable(server server.cpp)
 add_executable(client client.cpp)
 add_executable(tcpserver tcpserver.cpp)

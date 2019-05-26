@@ -22,8 +22,8 @@ void Poll::unsubscribe(Subscriber &sub) {
 		throw Error("Subscriber already unsubscribed");
 	}
 	this->subs.erase(it);
-	for(auto &i: this->fds){
-		if (i.fd == fd){
+	for (auto &i: this->fds) {
+		if (i.fd == fd) {
 			i.fd *= -1;
 		}
 	}
@@ -57,3 +57,7 @@ void Poll::do_poll() {
 }
 
 Poll::Poll() : shutdown(false) {}
+
+void Poll::do_shutdown() {
+	this->shutdown = true;
+}

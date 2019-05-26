@@ -24,6 +24,8 @@ public:
 
 	void do_poll();
 
+	void do_shutdown();
+
 	Poll();
 };
 

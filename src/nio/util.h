@@ -19,7 +19,7 @@
 #include <string>
 #include <iostream>
 #include <poll.h>
-#include <sys/filio.h>
+#include <stdarg.h>
 #include <sys/ioctl.h>
 
 struct Error : std::exception {

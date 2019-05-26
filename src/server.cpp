@@ -19,7 +19,6 @@
 #define BUFSIZE 1024
 
 
-
 int TRY(int val, const char *msg) {
 	if (val < 0) syserr(msg);
 	return val;

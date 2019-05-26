@@ -6,14 +6,14 @@
 
 
 void Subscriber::on_error(Poll &p, int event) {
-	std::cout << "Subscriber : on_error event_code=" << event << " errno=" << from_errno() << std::endl;
+	std::cout << this->name << ": on_error event_code=" << event << " errno=" << from_errno() << std::endl;
 	p.unsubscribe(*this);
 }
 
 
 Subscriber::~Subscriber() {
 	if (this->fd != 0) {
-		std::cout << "Closing fd " << std::endl;
+		std::cout << "Closing fd for " << this->name << std::endl;
 		close(this->fd);
 	}
 }
@@ -33,4 +33,6 @@ short Subscriber::get_mask() const {
 void Subscriber::set_expected(short mmask) {
 	this->expected = mmask;
 }
+
+Subscriber::Subscriber(const std::string &name) : name(name) {}
 

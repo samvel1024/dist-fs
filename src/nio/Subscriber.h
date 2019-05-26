@@ -6,6 +6,7 @@
 #define DISTFS_SUBSCRIBER_H
 
 #include "Poll.h"
+#include "util.h"
 
 class Poll;
 
@@ -13,6 +14,8 @@ class Subscriber {
 private:
 	int fd{};
 	short expected{};
+protected:
+	std::string name;
 public:
 	virtual void on_error(Poll &p, int event);
 
@@ -29,6 +32,8 @@ public:
 	short get_mask() const;
 
 	void set_expected(short mmask);
+
+	Subscriber(const std::string &name);
 };
 
 #endif //DISTFS_SUBSCRIBER_H
