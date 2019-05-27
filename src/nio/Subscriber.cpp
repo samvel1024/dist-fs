@@ -38,3 +38,7 @@ void Subscriber::set_expected(short mmask) {
 
 Subscriber::Subscriber(std::string name) : name(std::move(name)) {}
 
+const std::string &Subscriber::get_name() const {
+	return name;
+}
+

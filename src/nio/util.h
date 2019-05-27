@@ -27,7 +27,7 @@ struct Error : std::exception {
 
 	explicit Error(char const *fmt, ...) __attribute__((format(printf, 2, 3)));
 
-	char const *what();
+	char const *what() const noexcept override;
 };
 
 

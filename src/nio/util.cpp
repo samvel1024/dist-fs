@@ -8,8 +8,9 @@ Error::Error(char const *fmt, ...) {
 	va_end(ap);
 }
 
-char const *Error::what() { return this->text; }
-
+char const *Error::what() const noexcept {
+	return this->text;
+}
 
 std::string from_errno() {
 	std::string out = std::string("syserror{code = ") + std::to_string(errno) + ", msg = " + strerror(errno) + "}";

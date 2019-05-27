@@ -16,6 +16,8 @@ private:
 	std::vector<pollfd> fds;
 	std::unordered_map<int, std::shared_ptr<Subscriber>> subs;
 	bool shutdown;
+
+
 public:
 
 	void subscribe(std::shared_ptr<Subscriber> sub);

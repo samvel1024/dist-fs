@@ -1,24 +1,11 @@
+#include <utility>
+
 //
 // Created by Samvel Abrahamyan on 2019-05-26.
 //
 
 #include "TCPServer.h"
 #include "util.h"
-
-
-void TCPSession::on_input(Poll &p) {
-
-}
-
-void TCPSession::on_output(Poll &p) {
-	sprintf(this->buffer, "Hello World");
-	write(this->get_fd(), this->buffer, strlen(this->buffer));
-
-}
-
-TCPSession::TCPSession(std::string nm) : Subscriber(nm) {
-
-}
 
 
 void TCPServer::on_input(Poll &p) {
@@ -28,9 +15,7 @@ void TCPServer::on_input(Poll &p) {
 		socklen_t client_len = sizeof(client);
 		connected_fd = accept(this->get_fd(), (struct sockaddr *) &client, &client_len);
 		if (connected_fd > 0) {
-			std::shared_ptr<Subscriber> session = std::make_shared<TCPSession>(this->name + "_client");
-			session->set_fd(connected_fd);
-			session->set_expected(POLLOUT);
+			std::shared_ptr<Subscriber> session = fctr->create_session(*this, connected_fd);
 			p.subscribe(session);
 			std::cout << this->name << ": new connection" << std::endl;
 		}
@@ -45,7 +30,9 @@ void TCPServer::on_output(Poll &p) {
 }
 
 
-TCPServer::TCPServer(std::string nm, int port) : Subscriber(nm) {
+
+TCPServer::TCPServer(std::string nm, std::shared_ptr<TCPSessionFactory> ft, int port): Subscriber(std::move(nm)) {
+	this->fctr = std::move(ft);
 	struct sockaddr_in server_address;
 	server_address.sin_family = AF_INET; // IPv4
 	server_address.sin_addr.s_addr = htonl(INADDR_ANY); // listening on all interfaces
@@ -63,6 +50,4 @@ TCPServer::TCPServer(std::string nm, int port) : Subscriber(nm) {
 	no_err(getsockname(sock, (struct sockaddr *) &server_address, &len), "getsockname");
 	std::cout << this->name << ": listening on port " << ntohs(server_address.sin_port) << std::endl;
 }
-
-
 

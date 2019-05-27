@@ -33,6 +33,8 @@ public:
 
 	void set_expected(short mmask);
 
+	const std::string &get_name() const;
+
 	Subscriber(std::string name);
 };
 

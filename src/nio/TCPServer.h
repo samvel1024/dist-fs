@@ -6,29 +6,13 @@
 #define DISTFS_TCPSERVER_H
 
 #include "Subscriber.h"
+#include "TCPSessionFactory.h"
 
-
-class TCPSession : public Subscriber {
-
-private:
-	static constexpr int BUFLEN = 2048;
-	char buffer[BUFLEN]{};
-	int buf_sent{};
-	int buf_size{};
-
-public:
-
-	void on_input(Poll &p) override;
-
-	void on_output(Poll &p) override;
-
-	~TCPSession() override = default;
-
-	explicit TCPSession(std::string nm);
-};
+class TCPSessionFactory;
 
 class TCPServer : public Subscriber {
 
+	std::shared_ptr<TCPSessionFactory> fctr;
 public:
 
 	void on_input(Poll &p) override;
@@ -37,8 +21,9 @@ public:
 
 	~TCPServer() override = default;
 
-	explicit TCPServer(std::string nm, int port = 0);
+	explicit TCPServer(std::string nm, std::shared_ptr<TCPSessionFactory> ft, int port = 0);
 };
+
 
 
 #endif //DISTFS_TCPSERVER_H
