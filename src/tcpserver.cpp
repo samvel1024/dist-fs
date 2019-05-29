@@ -2,8 +2,7 @@
 #include "nio/TCPServer.h"
 #include "nio/KillReceiver.h"
 #include "nio/TCPSessionFactory.h"
-#include "FTSessionFactory.h"
-#include "FTSession.h"
+#include "FileDownloadSession.h"
 
 
 

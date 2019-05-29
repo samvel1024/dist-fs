@@ -1,16 +1,5 @@
 #include <utility>
-
-//
-// Created by Samvel Abrahamyan on 2019-05-26.
-//
-
 #include "Subscriber.h"
-
-
-void Subscriber::on_error(Poll &p, int event) {
-	std::cout << this->name << ": on_error event_code=" << event << " errno=" << from_errno() << std::endl;
-	p.unsubscribe(*this);
-}
 
 
 Subscriber::~Subscriber() {
@@ -42,3 +31,15 @@ const std::string &Subscriber::get_name() const {
 	return name;
 }
 
+void Subscriber::on_error(Poll &p, int event) {
+	std::cout << this->name << ": on_error event_code=" << event << " errno=" << from_errno() << std::endl;
+	p.unsubscribe(*this);
+}
+
+void Subscriber::on_input(Poll &p) {
+
+}
+
+void Subscriber::on_output(Poll &p) {
+
+}

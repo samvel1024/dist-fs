@@ -32,12 +32,12 @@ void Poll::unsubscribe(Subscriber &sub) {
 
 void Poll::do_poll() {
 	while (!this->shutdown) {
-		no_err(poll(&fds[0], fds.size(), WAIT_ENDLESS), "error in poll");
-		for (int i=0; i<fds.size(); ++i) {
+		int changed_fds = no_err(poll(&fds[0], fds.size(), WAIT_ENDLESS), "error in poll");
+		if (changed_fds == 0){
+			throw Error("Changed fds 0");
+		}
+		for (int i = 0; i < fds.size(); ++i) {
 			auto &fd = fds[i];
-			if (fd.fd == 0){
-				std::cout << "PIZDEC" << std::endl;
-			}
 			if (fd.revents == 0) continue;
 			auto listener = this->subs.find(fd.fd);
 			if (listener == this->subs.end()) {
@@ -65,7 +65,7 @@ Poll::Poll() : shutdown(false) {
 	struct sigaction sa;
 	sa.sa_handler = SIG_IGN;
 	sa.sa_flags = 0;
-	no_err (sigaction(SIGPIPE, &sa, 0), "Could not ignore sigpipe");
+	no_err(sigaction(SIGPIPE, &sa, 0), "Could not ignore sigpipe");
 }
 
 void Poll::do_shutdown() {

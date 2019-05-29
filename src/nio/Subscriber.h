@@ -11,17 +11,16 @@
 class Poll;
 
 class Subscriber {
-private:
+protected:
 	int fd{};
 	short expected{};
-protected:
 	std::string name;
 public:
 	virtual void on_error(Poll &p, int event);
 
-	virtual void on_input(Poll &p) = 0;
+	virtual void on_input(Poll &p);
 
-	virtual void on_output(Poll &p) = 0;
+	virtual void on_output(Poll &p);
 
 	virtual ~Subscriber();
 
