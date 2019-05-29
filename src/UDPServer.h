@@ -8,12 +8,15 @@
 
 #include "nio/Subscriber.h"
 #include "Dto.h"
+#include "SharedDirectory.h"
+
 
 class UDPServer : public Subscriber {
 private:
 	static constexpr int buf_len = 2000;
 	std::string buffer;
-
+	std::shared_ptr<SharedDirectory> dir;
+	const int timeout;
 	void on_dispatch(Poll &p, int bytes_read);
 	void on_hello(Poll &p, dto::Simple &msg);
 public:
@@ -24,7 +27,8 @@ public:
 
 	~UDPServer() override;
 
-	explicit UDPServer(const std::string name, std::string addr, uint16_t port);
+	explicit UDPServer(std::string name, std::string addr, uint16_t port, std::shared_ptr<SharedDirectory> shdir,
+	                   int timeout);
 
 };
 

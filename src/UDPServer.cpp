@@ -1,3 +1,5 @@
+#include <utility>
+
 //
 // Created by Samvel Abrahamyan on 2019-05-27.
 //
@@ -73,8 +75,12 @@ UDPServer::~UDPServer() {
 	//TODO unsubscribe multicast group
 }
 
-UDPServer::UDPServer(const std::string name, std::string addr, uint16_t port) : Subscriber(name),
-                                                                                buffer(buf_len, '\0') {
+UDPServer::UDPServer(const std::string name, std::string addr, uint16_t port, std::shared_ptr<SharedDirectory> shdir,
+                     int timeout)
+	: Subscriber(name),
+	  buffer(buf_len, '\0'),
+	  dir(std::move(shdir)),
+	  timeout(timeout) {
 	set_fd(connect_group(port, addr.c_str()));
 	set_expected(POLLIN);
 	std::cout << name << ": Listening on port " << port << std::endl;

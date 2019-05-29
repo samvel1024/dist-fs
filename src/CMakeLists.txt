@@ -26,15 +26,12 @@ target_link_libraries(Dto Err)
 add_library(Dir SharedDirectory.h SharedDirectory.cpp)
 target_link_libraries(Dir Err)
 
-#add_executable(tcpserver tcpserver.cpp FileDownloadSession.h FileDownloadSession.cpp UDPServer.cpp UDPServer.h)
-add_executable(mserver mserver.cpp UDPServer.cpp UDPServer.h SharedDirectory.cpp SharedDirectory.h)
-add_executable(packetgen packetgen.cpp)
-add_executable(udpclient err.cpp err.h client.cpp)
+add_executable(server server.cpp UDPServer.cpp UDPServer.h)
+target_link_libraries(server Nio Dir ${Boost_LIBRARIES})
 
-#target_link_libraries(tcpserver Nio)
-target_link_libraries(mserver ${Boost_LIBRARIES})
-target_link_libraries(mserver Nio)
+add_executable(packetgen packetgen.cpp)
 target_link_libraries(packetgen Dto)
+
 
 
 #TODO add compiler flags
