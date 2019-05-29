@@ -4,6 +4,7 @@
 
 #include "Poll.h"
 #include <signal.h>
+#include <string.h>
 
 const int YES = 1;
 
@@ -63,6 +64,7 @@ void Poll::do_poll() {
 
 Poll::Poll() : shutdown(false) {
 	struct sigaction sa;
+	bzero(&sa, sizeof(sa));
 	sa.sa_handler = SIG_IGN;
 	sa.sa_flags = 0;
 	no_err(sigaction(SIGPIPE, &sa, 0), "Could not ignore sigpipe");

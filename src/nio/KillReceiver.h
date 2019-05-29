@@ -19,5 +19,19 @@ public:
 	KillReceiver();
 };
 
+#else
+
+class KillReceiver : public Subscriber {
+public:
+	virtual ~KillReceiver(){
+
+	};
+
+	KillReceiver(): Subscriber("Fake") {
+		set_fd(-10);
+		set_expected(0);
+	}
+};
+
 #endif
 #endif //DISTFS_KILLRECEIVER_H
