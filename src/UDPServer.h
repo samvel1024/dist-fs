@@ -13,7 +13,6 @@ class UDPServer : public Subscriber {
 private:
 	static constexpr int buf_len = 2000;
 	std::string buffer;
-	int ctr{};
 
 	void on_dispatch(Poll &p, int bytes_read);
 	void on_hello(Poll &p, dto::Simple &msg);

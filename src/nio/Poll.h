@@ -20,11 +20,11 @@ private:
 
 public:
 
-	void subscribe(std::shared_ptr<Subscriber> sub);
+	Poll & subscribe(std::shared_ptr<Subscriber> sub);
 
 	void unsubscribe(Subscriber &sub);
 
-	void do_poll();
+	void loop();
 
 	void do_shutdown();
 

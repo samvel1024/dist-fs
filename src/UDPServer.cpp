@@ -46,8 +46,7 @@ void UDPServer::on_dispatch(Poll &p, int bytes_read) {
 	std::string type_header = buffer.substr(0, dto::CMD_TYPE_LEN);
 	switch (dto::from_header(type_header)) {
 		case dto::HELLO_REQ : {
-			auto dto = dto::unmarshall<dto::Simple>(buffer, bytes_read);
-			on_hello(p, *dto);
+			on_hello(p, *(dto::unmarshall<dto::Simple>(buffer, bytes_read)));
 			break;
 		}
 
@@ -59,13 +58,11 @@ void UDPServer::on_dispatch(Poll &p, int bytes_read) {
 }
 
 
-void UDPServer::on_hello(Poll &p, dto::Simple &msg){
+void UDPServer::on_hello(Poll &p, dto::Simple &msg) {
 	std::cout << name << ": msg " << msg << std::endl;
 }
 
 void UDPServer::on_output(Poll &p) {
-	std::cout << name << ": out" << ctr << "\n";
-	ctr++;
 }
 
 void on_msg(Poll &p, std::string message) {
@@ -76,7 +73,7 @@ UDPServer::~UDPServer() {
 	//TODO unsubscribe multicast group
 }
 
-UDPServer::UDPServer(const std::string name, std::string addr, uint16_t port) : Subscriber(name), ctr(0),
+UDPServer::UDPServer(const std::string name, std::string addr, uint16_t port) : Subscriber(name),
                                                                                 buffer(buf_len, '\0') {
 	set_fd(connect_group(port, addr.c_str()));
 	set_expected(POLLIN);

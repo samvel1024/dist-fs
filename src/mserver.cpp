@@ -4,6 +4,7 @@
 #include "nio/Poll.h"
 #include "UDPServer.h"
 #include "nio/KillReceiver.h"
+#include "SharedDirectory.h"
 
 namespace po = boost::program_options;
 
@@ -35,10 +36,8 @@ po::variables_map parse_args(int ac, char **av) {
 
 int main(int ac, char **av) {
 	Poll p;
-	std::shared_ptr<Subscriber> sub = std::make_shared<UDPServer>(std::string("UDPServer"), std::string("239.13.41.5"), 3000);
-	std::shared_ptr<KillReceiver> kill = std::make_shared<KillReceiver>();
-	p.subscribe(kill);
-	p.subscribe(sub);
-	p.do_poll();
+	p.subscribe(std::make_shared<UDPServer>(std::string("UDPServer"), std::string("239.13.41.5"), 3000)).
+		subscribe(std::make_shared<KillReceiver>());
+	p.loop();
 	return 0;
 }

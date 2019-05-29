@@ -4,7 +4,7 @@
 #ifdef __linux__
 #include <signal.h>
 #include "KillReceiver.h"
-#include "util.h"
+#include "Error.h"
 #include <sys/signalfd.h>
 
 void KillReceiver::on_input(Poll &p) {
