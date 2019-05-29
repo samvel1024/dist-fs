@@ -6,7 +6,7 @@
 #define DISTFS_SUBSCRIBER_H
 
 #include "Poll.h"
-#include "util.h"
+#include "Error.h"
 
 class Poll;
 

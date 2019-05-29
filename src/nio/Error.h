@@ -30,6 +30,9 @@ struct Error : std::exception {
 	char const *what() const noexcept override;
 };
 
+struct IllegalPacket: std::exception {
+};
+
 
 std::string from_errno();
 

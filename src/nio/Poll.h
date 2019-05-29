@@ -6,7 +6,7 @@
 #define DISTFS_POLL_H
 
 #include "Subscriber.h"
-#include "util.h"
+#include "Error.h"
 
 class Subscriber;
 

@@ -10,6 +10,7 @@
 #include <iostream>
 #include <string.h>
 #include <sstream>
+#include "nio/Error.h"
 
 #ifdef __linux__
 #if __BIG_ENDIAN__
@@ -73,7 +74,8 @@ namespace dto {
 			{"HELLO",    HELLO_REQ}, //TODO fill the rest
 			{"GOOD_DAY", HELLO_RES}
 		};
-		auto it = map.find(header);
+		std::string norm = std::string(header.c_str());
+		auto it = map.find(norm);
 		if (it == map.end()) {
 			return TYPE_UNKNOWN;
 		}
@@ -82,8 +84,7 @@ namespace dto {
 
 	template<typename T>
 	inline std::shared_ptr<T> create_dto(int payload_size) {
-		int packet_size = sizeof(T) + payload_size;
-		char *mem = (char *) malloc(packet_size);
+		char *mem = (char *) malloc(sizeof(T) + payload_size);
 		bzero(mem, CMD_TYPE_LEN);
 		std::shared_ptr<T> ans(reinterpret_cast<T *>(mem), free);
 		return ans;
@@ -99,11 +100,14 @@ namespace dto {
 	}
 
 	template<typename T>
-	inline std::shared_ptr<T> unmarshall(std::string &payload) {
-		char *mem = (char *) malloc(payload.size() + 1);
-		mem[payload.size()] = '\0';
+	inline std::shared_ptr<T> unmarshall(std::string &payload, int len) {
+		if (len < sizeof(T)){
+			throw IllegalPacket();
+		}
+		char *mem = (char *) malloc(len + 1);
+		mem[len] = '\0';
 		std::shared_ptr<T> sp(reinterpret_cast<T *>(mem), free);
-		memcpy(sp.get(), &payload[0], payload.size());
+		memcpy(sp.get(), &payload[0], len);
 		do_ntoh(sp.get());
 		return sp;
 	}

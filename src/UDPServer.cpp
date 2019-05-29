@@ -36,24 +36,31 @@ void UDPServer::on_input(Poll &p) {
 	clientlen = sizeof(clientaddr);
 	int bytes_read = no_err(recvfrom(fd, &buffer[0], buffer.size(), 0,
 	                                 (struct sockaddr *) &clientaddr, &clientlen), "Error in recvfrom");
-	std::string type_header = buffer.substr(0, dto::CMD_TYPE_LEN);
-	switch (dto::from_header(type_header)) {
-		case dto::HELLO_REQ : {
-//			auto req = dto::unmarshall_simple(buffer);
-			break;
-		}
-		default : {
-			std::cout << name << ": Illegal type header " << type_header << ", skipping" << std::endl;
-			return;
-		}
-	}
+	on_dispatch(p, bytes_read);
 //	std::cout << name << "Server received:" << buffer << std::endl;
 //	std::string resp(5000, 'A');
 //	no_err(sendto(fd, &resp[0], resp.size(), 0, (struct sockaddr *) &clientaddr, clientlen), "Error in sendto");
 }
 
-void UDPServer::on_hello(Poll &p, std::shared_ptr<dto::Simple> msg){
-	std::cout << msg << std::endl;
+void UDPServer::on_dispatch(Poll &p, int bytes_read) {
+	std::string type_header = buffer.substr(0, dto::CMD_TYPE_LEN);
+	switch (dto::from_header(type_header)) {
+		case dto::HELLO_REQ : {
+			auto dto = dto::unmarshall<dto::Simple>(buffer, bytes_read);
+			on_hello(p, *dto);
+			break;
+		}
+
+		default : {
+			std::cout << name << ": Illegal type header " << type_header << ", skipping" << std::endl;
+			return;
+		}
+	}
+}
+
+
+void UDPServer::on_hello(Poll &p, dto::Simple &msg){
+	std::cout << name << ": msg " << msg << std::endl;
 }
 
 void UDPServer::on_output(Poll &p) {
@@ -64,7 +71,6 @@ void UDPServer::on_output(Poll &p) {
 void on_msg(Poll &p, std::string message) {
 
 }
-
 
 UDPServer::~UDPServer() {
 	//TODO unsubscribe multicast group

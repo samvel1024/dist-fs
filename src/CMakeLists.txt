@@ -5,20 +5,26 @@ find_package(Boost COMPONENTS program_options REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
 
+add_library(Err
+    nio/Error.h nio/Error.cpp
+)
+
 add_library(Nio
-        nio/util.h nio/util.cpp
         nio/Poll.cpp nio/Poll.h
         nio/TCPServer.cpp nio/TCPServer.h
         nio/Subscriber.cpp nio/Subscriber.h
         nio/KillReceiver.cpp nio/KillReceiver.h
         nio/TCPSessionFactory.h)
 
+target_link_libraries(Nio Err)
+
 add_library(Dto Dto.h Dto.cpp)
+target_link_libraries(Dto Err)
 
 #add_executable(tcpserver tcpserver.cpp FileDownloadSession.h FileDownloadSession.cpp UDPServer.cpp UDPServer.h)
 add_executable(mserver mserver.cpp UDPServer.cpp UDPServer.h)
 add_executable(packetgen packetgen.cpp)
-#add_executable(udpclient err.cpp err.h client.cpp)
+add_executable(udpclient err.cpp err.h client.cpp)
 
 #target_link_libraries(tcpserver Nio)
 target_link_libraries(mserver Boost::program_options)

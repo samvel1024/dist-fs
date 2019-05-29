@@ -15,7 +15,8 @@ private:
 	std::string buffer;
 	int ctr{};
 
-	void on_hello(Poll &p, std::shared_ptr<dto::Simple> msg);
+	void on_dispatch(Poll &p, int bytes_read);
+	void on_hello(Poll &p, dto::Simple &msg);
 public:
 
 	void on_input(Poll &p) override;
@@ -26,7 +27,6 @@ public:
 
 	explicit UDPServer(const std::string name, std::string addr, uint16_t port);
 
-	void on_message(Poll &p, std::string message);
 };
 
 
