@@ -96,6 +96,7 @@ void UDPServer::on_list(Poll &poll, dto::Simple &msg) {
 	std::cout << name << ": response " << *dto << std::endl;
 	no_err(sendto(fd, dto.get(), sizeof(dto::Simple) + resp.size(), 0, (struct sockaddr *) &current_client,
 	              sockaddr_len), "Error in sendto");
+	//TODO need to split into packets
 }
 
 void UDPServer::on_output(Poll &p) {

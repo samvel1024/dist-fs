@@ -5,12 +5,11 @@
 const int YES = 1;
 
 Poll &Poll::subscribe(std::shared_ptr<Subscriber> sub) {
-	if (sub->get_fd() == 0)
-		throw Error("Zero mask or fd");
-	if (sub->get_fd() > 0)
+	if (sub->get_fd() >= 0)
 		no_err(ioctl(sub->get_fd(), FIONBIO, (char *) &YES), "Setting to non blocking");
 	fds.push_back({.fd = sub->get_fd(), .events = sub->get_mask(), .revents = 0});
 	subs[sub->get_fd()] = sub;
+	sub->bind_pollfd(&fds[fds.size() - 1]);
 	return *this;
 }
 
@@ -21,18 +20,24 @@ void Poll::unsubscribe(Subscriber &sub) {
 		throw Error("Subscriber already unsubscribed");
 	}
 	this->subs.erase(it);
-	for (auto &i: this->fds) {
+	for (auto &i: this->fds) { //TODO remove not needed fds
 		if (i.fd == fd) {
 			i.fd *= -1;
+			if (i.fd == 0) i.fd = -1;
 		}
 	}
 }
 
 void Poll::loop() {
 	while (!this->shutdown) {
-		int changed_fds = no_err(poll(&fds[0], fds.size(), WAIT_ENDLESS), "error in poll");
-		if (changed_fds == 0) {
-			throw Error("Changed fds 0");
+		int changed_fds = no_err(poll(&fds[0], fds.size(), WAIT_QUANTUM), "error in poll");
+		if (changed_fds == 0) { //Timeout occured
+			uint64_t now = current_time_millis();
+			for (auto it = alarms.cbegin(); it != alarms.cend() && it->first <= now;) {
+				it->second->get_callback()();
+				alarms.erase(it++);
+			}
+			continue;
 		}
 		for (int i = 0; i < fds.size(); ++i) {
 			auto &fd = fds[i];
@@ -69,4 +74,9 @@ Poll::Poll() : shutdown(false) {
 
 void Poll::do_shutdown() {
 	this->shutdown = true;
+}
+
+Poll &Poll::subscribe_alarm(std::shared_ptr<Alarm> alarm) {
+	this->alarms[alarm->get_timeout_time()] = alarm;
+	return *this;
 }

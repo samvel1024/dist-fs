@@ -15,7 +15,11 @@ protected:
 	int fd{};
 	short expected{};
 	std::string name;
+	struct pollfd *pollfd;
 public:
+
+	void bind_pollfd(struct pollfd *p);
+
 	virtual void on_error(Poll &p, int event);
 
 	virtual void on_input(Poll &p);
@@ -29,6 +33,10 @@ public:
 	void set_fd(int mdf);
 
 	short get_mask() const;
+
+	void disable_fd();
+
+	void enable_fd();
 
 	void set_expected(short mmask);
 

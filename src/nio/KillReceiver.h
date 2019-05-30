@@ -21,6 +21,9 @@ public:
 
 #else
 
+/**
+ * BSD and MacOS systems dont have signalfd syscall
+ */
 class KillReceiver : public Subscriber {
 public:
 	virtual ~KillReceiver() {
