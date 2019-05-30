@@ -32,12 +32,12 @@ void SharedDirectory::index_files() {
 		}
 		long size = file_size(file);
 		actual_space += size;
-		indexed_files.emplace(std::string(file.filename().string()));
+		indexed_files.emplace(file.filename().string(), size);
 	}
 	remaining_space = total_space - actual_space;
 }
 
-std::set<std::string> SharedDirectory::get_files() {
+std::map<std::string, long> SharedDirectory::get_files() {
 	return indexed_files;
 }
 
@@ -46,7 +46,7 @@ long SharedDirectory::get_remaining_space() const {
 }
 
 
-void SharedDirectory::reserve_file(std::string name, long size) {
+void SharedDirectory::reserve_file(const std::string &name, long size) {
 	if (!can_create_file(size, name)) {
 		throw Error("Too big file");
 	}
@@ -55,20 +55,20 @@ void SharedDirectory::reserve_file(std::string name, long size) {
 }
 
 
-bool SharedDirectory::can_create_file(long size, std::string name) {
+bool SharedDirectory::can_create_file(long size, const std::string &name) {
 	return size <= this->remaining_space && size > 0
 	       && portable_name(name)
 	       && (indexed_files.find(name) == indexed_files.end())
 	       && (pending_files.find(name) == pending_files.end());
 }
 
-path SharedDirectory::path_in_dir(std::string p){
+path SharedDirectory::path_in_dir(std::string p) {
 	path file_path(shared_dir);
 	file_path /= p;
 	return file_path;
 }
 
-void SharedDirectory::cancel_reserved_file(std::string f) {
+void SharedDirectory::cancel_reserved_file(const std::string &f) {
 	auto it = pending_files.find(f);
 	if (it == pending_files.end()) {
 		throw Error("File was not even reserved");
@@ -77,52 +77,51 @@ void SharedDirectory::cancel_reserved_file(std::string f) {
 	pending_files.erase(it);
 }
 
-boost::filesystem::fstream SharedDirectory::open_writable_file(std::string name) {
-	if (pending_files.find(name) == pending_files.end()){
+boost::filesystem::fstream SharedDirectory::open_writable_file(const std::string &name) {
+	if (pending_files.find(name) == pending_files.end()) {
 		throw Error("File should be reserved first");
 	}
 	return fstream(path_in_dir(name), std::ios::out);
 }
 
-boost::filesystem::fstream SharedDirectory::open_readable_file(std::string name) {
-	if (!can_read_file(name)){
+boost::filesystem::fstream SharedDirectory::open_readable_file(const std::string &name) {
+	if (!can_read_file(name)) {
 		throw Error("File does not exist");
 	}
 	return fstream(path_in_dir(name), std::ios::in);
 }
 
-bool SharedDirectory::can_read_file(std::string name) {
+bool SharedDirectory::can_read_file(const std::string &name) {
 	return exists(path_in_dir(name)) && indexed_files.find(name) != indexed_files.end();
 }
 
 void SharedDirectory::on_finished_writing(std::string name) {
 	auto it = pending_files.find(name);
-	if (it == pending_files.end()){
+	if (it == pending_files.end()) {
 		throw Error("Not registered file");
 	}
 	long promised_size = it->second;
 	pending_files.erase(it);
 	path p = path_in_dir(name);
-	if(!exists(p)){
+	if (!exists(p)) {
 		throw Error("File not exists");
 	}
 	long size = file_size(p);
-	if (size > promised_size){
+	if (size > promised_size) {
 		remove(p);
 		remaining_space += promised_size;
-	}
-	else {
+	} else {
 		remaining_space += promised_size - size;
-		indexed_files.emplace(name);
+		indexed_files.emplace(name, size);
 	}
 }
 
-void SharedDirectory::delete_file(std::string name) {
-	if (!can_read_file(name)){
+void SharedDirectory::delete_file(const std::string &name) {
+	if (!can_read_file(name)) {
 		throw Error("The file is not deletable");
 	}
 	path p = path_in_dir(name);
-	if (!exists(p)){
+	if (!exists(p)) {
 		throw Error("The file does not exist");
 	}
 
@@ -130,6 +129,17 @@ void SharedDirectory::delete_file(std::string name) {
 	indexed_files.erase(indexed_files.find(name));
 	remaining_space += size;
 	remove(p);
+}
+
+std::string SharedDirectory::search_file(const std::string &query) {
+	std::string ans;
+	for (auto &it:indexed_files) {
+		if (query.empty() || (it.first.find(query) != std::string::npos && it.second > 0)) {
+			ans += it.first;
+			ans += '\n';
+		}
+	}
+	return ans;
 }
 
 

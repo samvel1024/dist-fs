@@ -13,7 +13,9 @@ class TCPServer;
 class TCPSessionFactory {
 public:
 	virtual std::shared_ptr<Subscriber> create_session(TCPServer &serv, int fd) = 0;
+
 	TCPSessionFactory() = default;
+
 	virtual ~TCPSessionFactory() = default;
 };
 

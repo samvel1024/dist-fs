@@ -5,18 +5,17 @@
 #include "FileDownloadSession.h"
 
 
-
 void FileDownloadSession::on_input(Poll &p) {
 
 }
 
 void FileDownloadSession::on_output(Poll &p) {
 	int n = write(this->get_fd(), this->buffer, 9000);
-	if (n < 0){
+	if (n < 0) {
 		std::cout << this->name << ": Error in writing to socket, disconnecting\n";
 		p.unsubscribe(*this);
-	}else if(n != 9000){
-		std::cout << "Illegal write: " <<n <<  std::endl;
+	} else if (n != 9000) {
+		std::cout << "Illegal write: " << n << std::endl;
 	}
 }
 

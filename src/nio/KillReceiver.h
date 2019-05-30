@@ -23,11 +23,11 @@ public:
 
 class KillReceiver : public Subscriber {
 public:
-	virtual ~KillReceiver(){
+	virtual ~KillReceiver() {
 
 	};
 
-	KillReceiver(): Subscriber("Fake") {
+	KillReceiver() : Subscriber("Fake") {
 		set_fd(-10);
 		set_expected(0);
 	}

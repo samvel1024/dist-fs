@@ -14,11 +14,17 @@
 class UDPServer : public Subscriber {
 private:
 	static constexpr int buf_len = 2000;
+	static constexpr int sockaddr_len = sizeof(sockaddr_in);
+	struct sockaddr_in current_client;
 	std::string buffer;
 	std::shared_ptr<SharedDirectory> dir;
 	const int timeout;
+	const uint16_t port;
+
 	void on_dispatch(Poll &p, int bytes_read);
+
 	void on_hello(Poll &p, dto::Simple &msg);
+
 public:
 
 	void on_input(Poll &p) override;
@@ -30,6 +36,7 @@ public:
 	explicit UDPServer(std::string name, std::string addr, uint16_t port, std::shared_ptr<SharedDirectory> shdir,
 	                   int timeout);
 
+	void on_list(Poll &poll, dto::Simple &simple);
 };
 
 

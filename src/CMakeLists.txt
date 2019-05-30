@@ -9,8 +9,8 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 
 add_library(Err
-    nio/Error.h nio/Error.cpp
-)
+        nio/Error.h nio/Error.cpp
+        )
 
 add_library(Nio
         nio/Poll.cpp nio/Poll.h
@@ -31,7 +31,6 @@ target_link_libraries(server Nio Dir ${Boost_LIBRARIES})
 
 add_executable(packetgen packetgen.cpp)
 target_link_libraries(packetgen Dto)
-
 
 
 #TODO add compiler flags

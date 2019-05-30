@@ -4,6 +4,7 @@
 
 #include "../src/SharedDirectory.h"
 #include "../src/nio/Error.h"
+
 using namespace boost::filesystem;
 
 #define TESTDIR "__mtest_dir__"

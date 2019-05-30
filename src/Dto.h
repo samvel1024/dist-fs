@@ -23,7 +23,6 @@
 #endif
 
 
-
 namespace dto {
 	constexpr int CMD_TYPE_LEN = 10;
 
@@ -72,7 +71,9 @@ namespace dto {
 	inline Type from_header(std::string &header) {
 		static std::unordered_map<std::string, Type> map{
 			{"HELLO",    HELLO_REQ}, //TODO fill the rest
-			{"GOOD_DAY", HELLO_RES}
+			{"GOOD_DAY", HELLO_RES},
+			{"LIST",     LIST_REQ},
+			{"MY_LIST",  LIST_RES}
 		};
 		std::string norm = std::string(header.c_str());
 		auto it = map.find(norm);
@@ -83,10 +84,11 @@ namespace dto {
 	}
 
 	template<typename T>
-	inline std::shared_ptr<T> create_dto(int payload_size) {
-		char *mem = (char *) malloc(sizeof(T) + payload_size);
-		bzero(mem, CMD_TYPE_LEN);
+	inline std::shared_ptr<T> create_dto(int payload_size, uint64_t seq) {
+		char *mem = (char *) malloc(sizeof(T) + payload_size + 1);
+		bzero(mem, sizeof(T) + payload_size + 1);
 		std::shared_ptr<T> ans(reinterpret_cast<T *>(mem), free);
+		ans->cmd_seq = seq;
 		return ans;
 	}
 
@@ -101,8 +103,8 @@ namespace dto {
 
 	template<typename T>
 	inline std::shared_ptr<T> unmarshall(std::string &payload, int len) {
-		if (len < sizeof(T)){
-			throw IllegalPacket();
+		if (len < sizeof(T)) {
+			throw Error("Packet too small");
 		}
 		char *mem = (char *) malloc(len + 1);
 		mem[len] = '\0';

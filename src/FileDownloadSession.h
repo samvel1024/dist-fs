@@ -31,11 +31,11 @@ public:
 class FTSessionFactory : public TCPSessionFactory {
 public:
 	std::shared_ptr<Subscriber> create_session(TCPServer &serv, int fd) override;
+
 	explicit FTSessionFactory();
+
 	~FTSessionFactory() override;
 };
-
-
 
 
 #endif //DISTFS_FILEDOWNLOADSESSION_H

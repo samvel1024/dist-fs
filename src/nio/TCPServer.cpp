@@ -30,8 +30,7 @@ void TCPServer::on_output(Poll &p) {
 }
 
 
-
-TCPServer::TCPServer(std::string nm, std::shared_ptr<TCPSessionFactory> ft, int port): Subscriber(std::move(nm)) {
+TCPServer::TCPServer(std::string nm, std::shared_ptr<TCPSessionFactory> ft, int port) : Subscriber(std::move(nm)) {
 	this->fctr = std::move(ft);
 	struct sockaddr_in server_address;
 	server_address.sin_family = AF_INET; // IPv4

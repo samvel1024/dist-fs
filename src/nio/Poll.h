@@ -20,7 +20,7 @@ private:
 
 public:
 
-	Poll & subscribe(std::shared_ptr<Subscriber> sub);
+	Poll &subscribe(std::shared_ptr<Subscriber> sub);
 
 	void unsubscribe(Subscriber &sub);
 

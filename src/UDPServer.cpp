@@ -33,11 +33,10 @@ int connect_group(in_port_t port, const char *addr) {
 
 void UDPServer::on_input(Poll &p) {
 	//TODO support partial reads
-	struct sockaddr_in clientaddr;
 	unsigned clientlen; /* byte size of client's address */
-	clientlen = sizeof(clientaddr);
+	clientlen = sizeof(current_client);
 	int bytes_read = no_err(recvfrom(fd, &buffer[0], buffer.size(), 0,
-	                                 (struct sockaddr *) &clientaddr, &clientlen), "Error in recvfrom");
+	                                 (struct sockaddr *) &current_client, &clientlen), "Error in recvfrom");
 	on_dispatch(p, bytes_read);
 //	std::cout << name << "Server received:" << buffer << std::endl;
 //	std::string resp(5000, 'A');
@@ -46,22 +45,57 @@ void UDPServer::on_input(Poll &p) {
 
 void UDPServer::on_dispatch(Poll &p, int bytes_read) {
 	std::string type_header = buffer.substr(0, dto::CMD_TYPE_LEN);
-	switch (dto::from_header(type_header)) {
-		case dto::HELLO_REQ : {
-			on_hello(p, *(dto::unmarshall<dto::Simple>(buffer, bytes_read)));
-			break;
+	try {
+		switch (dto::from_header(type_header)) {
+			case dto::HELLO_REQ : {
+				on_hello(p, *(dto::unmarshall<dto::Simple>(buffer, bytes_read)));
+				break;
+			}
+			case dto::LIST_REQ : {
+				on_list(p, *(dto::unmarshall<dto::Simple>(buffer, bytes_read)));
+				break;
+			}
+			default : {
+				throw Error("Illegal cmd type");
+			}
 		}
-
-		default : {
-			std::cout << name << ": Illegal type header " << type_header << ", skipping" << std::endl;
-			return;
-		}
+	} catch (Error &err) {
+		char *s = inet_ntoa(current_client.sin_addr);
+		uint16_t port = ntohs(current_client.sin_port);
+		std::cout << "[PCKG ERROR] Skipping invalid package from " << s << ":" << port << ". " << err.what() << std::endl;
 	}
 }
 
 
 void UDPServer::on_hello(Poll &p, dto::Simple &msg) {
-	std::cout << name << ": msg " << msg << std::endl;
+	if (strlen(msg.payload) != 0) {
+		throw Error("Hello should not have a payload");
+	}
+	std::cout << name << ": request " << msg << std::endl;
+	std::string port_str = std::to_string(port);
+	auto resp = dto::create_dto<dto::Complex>(port_str.size(), msg.cmd_seq);
+	strcpy(resp->cmd, "GOOD_DAY");
+	//TODO htobe
+	resp->param = dir->get_remaining_space();
+	memcpy(resp->payload, &port_str[0], port_str.size());
+	std::cout << name << ": response " << *resp << std::endl;
+	no_err(sendto(fd, resp.get(), sizeof(dto::Complex) + port_str.size(), 0, (struct sockaddr *) &current_client,
+	              sockaddr_len), "Error in sendto");
+}
+
+void UDPServer::on_list(Poll &poll, dto::Simple &msg) {
+	std::string query(msg.payload);
+	std::string resp = dir->search_file(query);
+	std::cout << name << ": request " << msg << std::endl;
+	if (resp.empty()) {
+		return;
+	}
+	auto dto = dto::create_dto<dto::Simple>(resp.size(), msg.cmd_seq);
+	memcpy(dto->payload, &resp[0], resp.size());
+	strcpy(dto->cmd, "MY_LIST");
+	std::cout << name << ": response " << *dto << std::endl;
+	no_err(sendto(fd, dto.get(), sizeof(dto::Simple) + resp.size(), 0, (struct sockaddr *) &current_client,
+	              sockaddr_len), "Error in sendto");
 }
 
 void UDPServer::on_output(Poll &p) {
@@ -80,7 +114,8 @@ UDPServer::UDPServer(const std::string name, std::string addr, uint16_t port, st
 	: Subscriber(name),
 	  buffer(buf_len, '\0'),
 	  dir(std::move(shdir)),
-	  timeout(timeout) {
+	  timeout(timeout),
+	  port(port) {
 	set_fd(connect_group(port, addr.c_str()));
 	set_expected(POLLIN);
 	std::cout << name << ": Listening on port " << port << std::endl;
