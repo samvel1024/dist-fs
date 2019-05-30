@@ -9,7 +9,6 @@ Poll &Poll::subscribe(std::shared_ptr<Subscriber> sub) {
 		no_err(ioctl(sub->get_fd(), FIONBIO, (char *) &YES), "Setting to non blocking");
 	fds.push_back({.fd = sub->get_fd(), .events = sub->get_mask(), .revents = 0});
 	subs[sub->get_fd()] = sub;
-	sub->bind_pollfd(&fds[fds.size() - 1]);
 	return *this;
 }
 
@@ -42,27 +41,25 @@ void Poll::loop() {
 		for (int i = 0; i < fds.size(); ++i) {
 			auto &fd = fds[i];
 			if (fd.revents == 0) continue;
-			auto listener = this->subs.find(fd.fd);
-			if (listener == this->subs.end()) {
+			auto listener_itr = this->subs.find(fd.fd);
+			if (listener_itr == this->subs.end()) {
 				throw Error("No handler for fd %d", fd.fd);
 			}
-			switch (fd.revents) {
-				case (POLLIN): {
-					listener->second->on_input(*this);
-					break;
-				}
-				case (POLLOUT): {
-					listener->second->on_output(*this);
-					break;
-				}
-				default: {
-					listener->second->on_error(*this, fd.revents);
-					break;
-				}
+			auto listener = listener_itr->second;
+			if (fd.events & POLLIN) {
+				listener->on_input(*this);
+			}
+			if (fd.events & POLLOUT) {
+				listener->on_output(*this);
+			}
+			if (fd.events & !(POLLIN | POLLOUT)) {
+				std::cout << (fd.events ^ (POLLIN | POLLOUT)) << " " << fd.events << std::endl;
+				listener->on_error(*this, fd.revents);
 			}
 		}
 	}
 }
+
 
 Poll::Poll() : shutdown(false) {
 	struct sigaction sa;
@@ -79,4 +76,17 @@ void Poll::do_shutdown() {
 Poll &Poll::subscribe_alarm(std::shared_ptr<Alarm> alarm) {
 	this->alarms[alarm->get_timeout_time()] = alarm;
 	return *this;
+}
+
+void Poll::notify_subscriber_changed(Subscriber &listener) {
+	if (!listener.is_dirty()) return;
+	int initial_fd = abs(listener.get_fd());
+	for (auto &fd: fds) {
+		if (fd.fd == initial_fd) {
+			fd.fd = listener.get_fd();
+			fd.events = listener.get_mask();
+			listener.set_dirty(false);
+			break;
+		}
+	}
 }

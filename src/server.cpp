@@ -9,7 +9,7 @@
 
 namespace po = boost::program_options;
 
-po::variables_map parse_args(int ac, char **av) {
+po::variables_map validate_args(int ac, char **av) {
 	boost::program_options::options_description desc("Allowed options");
 	desc.add_options()
 		("help,h", "Help")
@@ -36,7 +36,7 @@ po::variables_map parse_args(int ac, char **av) {
 }
 
 int main(int ac, char **av) {
-	po::variables_map arg = parse_args(ac, av);
+	po::variables_map arg = validate_args(ac, av);
 	auto shdir = std::make_shared<SharedDirectory>(arg["shared-folder"].as<std::string>(), arg["max-space"].as<long>());
 	Poll poll;
 	poll

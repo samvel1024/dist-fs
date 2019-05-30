@@ -8,6 +8,7 @@
 #include "Subscriber.h"
 #include "Error.h"
 #include "Alarm.h"
+#include <map>
 
 class Subscriber;
 class Alarm;
@@ -17,7 +18,7 @@ private:
 	static constexpr int WAIT_QUANTUM = 10;
 	std::vector<pollfd> fds;
 	std::unordered_map<int, std::shared_ptr<Subscriber>> subs;
-	std::unordered_map<uint64_t, std::shared_ptr<Alarm>> alarms;
+	std::map<uint64_t, std::shared_ptr<Alarm>> alarms;
 	bool shutdown;
 
 
@@ -32,6 +33,8 @@ public:
 	void loop();
 
 	void do_shutdown();
+
+	void notify_subscriber_changed(Subscriber &s);
 
 	Poll();
 };

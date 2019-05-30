@@ -12,13 +12,12 @@ class Poll;
 
 class Subscriber {
 protected:
+	static constexpr int buf_len = 1000;
+	bool dirty;
 	int fd{};
 	short expected{};
 	std::string name;
-	struct pollfd *pollfd;
 public:
-
-	void bind_pollfd(struct pollfd *p);
 
 	virtual void on_error(Poll &p, int event);
 
@@ -34,15 +33,15 @@ public:
 
 	short get_mask() const;
 
-	void disable_fd();
-
-	void enable_fd();
-
 	void set_expected(short mmask);
 
 	const std::string &get_name() const;
 
 	Subscriber(std::string name);
+
+	bool is_dirty() const;
+
+	void set_dirty(bool dirty);
 };
 
 #endif //DISTFS_SUBSCRIBER_H

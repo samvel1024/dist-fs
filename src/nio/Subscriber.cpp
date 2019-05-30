@@ -3,7 +3,7 @@
 #include <cmath>
 
 Subscriber::~Subscriber() {
-	if (this->fd  >= 0) {
+	if (this->fd >= 0) {
 		std::cout << "Closing fd for " << this->name << std::endl;
 		close(this->fd);
 	}
@@ -15,9 +15,7 @@ int Subscriber::get_fd() const {
 
 void Subscriber::set_fd(int mdf) {
 	this->fd = mdf;
-	if (this->pollfd){
-		this->pollfd->fd = this->fd;
-	}
+	this->dirty = true;
 }
 
 short Subscriber::get_mask() const {
@@ -26,12 +24,10 @@ short Subscriber::get_mask() const {
 
 void Subscriber::set_expected(short mmask) {
 	this->expected = mmask;
-	if (this->pollfd){
-		this->pollfd->events = mmask;
-	}
+	this->dirty = true;
 }
 
-Subscriber::Subscriber(std::string name) : name(std::move(name)), pollfd(nullptr) {}
+Subscriber::Subscriber(std::string name) : dirty(false), name(std::move(name)) {}
 
 const std::string &Subscriber::get_name() const {
 	return name;
@@ -50,20 +46,11 @@ void Subscriber::on_output(Poll &p) {
 
 }
 
-void Subscriber::disable_fd() {
-	this->fd = -abs(this->fd);
-	if (pollfd){
-		pollfd->fd = this->fd;
-	}
+bool Subscriber::is_dirty() const {
+	return dirty;
 }
 
-void Subscriber::enable_fd() {
-	this->fd = abs(this->fd);
-	if (pollfd){
-		pollfd->fd = this->fd;
-	}
+void Subscriber::set_dirty(bool dirty) {
+	this->dirty = dirty;
 }
 
-void Subscriber::bind_pollfd(struct pollfd *p) {
-	this->pollfd = p;
-}

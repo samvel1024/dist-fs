@@ -6,7 +6,7 @@ export PATH=${PATH}:${SIKBLD}/src
 
 function sikbuild(){
 	curr=$(pwd)
-	cd ${SIKBLD} && make
+	cd ${SIKBLD} && make -j8
 	cd $curr
 }
 
