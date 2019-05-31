@@ -12,7 +12,6 @@ class Poll;
 
 class Subscriber {
 protected:
-	static constexpr int buf_len = 1000;
 	bool dirty;
 	int fd{};
 	short expected{};
@@ -27,6 +26,10 @@ public:
 
 	virtual ~Subscriber();
 
+	void disable();
+
+	void enable();
+
 	int get_fd() const;
 
 	void set_fd(int mdf);
@@ -37,7 +40,7 @@ public:
 
 	const std::string &get_name() const;
 
-	Subscriber(std::string name);
+	explicit Subscriber(std::string name);
 
 	bool is_dirty() const;
 

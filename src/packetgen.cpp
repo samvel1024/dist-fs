@@ -6,6 +6,10 @@
 
 using namespace dto;
 
+/*
+ * example usage  printf "LIST\nDownload\n1 4123 1234" | packetgen | nc -u ${IP} 3000
+ */
+
 int main() {
 	int is_simple;
 	uint64_t param, seq;

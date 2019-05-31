@@ -54,7 +54,7 @@ int main(int ac, char **av) {
 	Poll poll;
 	poll
 		.subscribe(std::make_shared<CLIListener>(
-			args["udp-port"].as<uint16_t >(),
+			args["udp-port"].as<uint16_t>(),
 			path(args["shared-folder"].as<std::string>()),
 			args["timeout"].as<int>(),
 			args["mcast"].as<std::string>()

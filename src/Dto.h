@@ -46,7 +46,7 @@ namespace dto {
 		LIST_REQ, LIST_RES,
 		DOWNLOAD_REQ, DOWNLOAD_RES,
 		DEL_REQ, DEL_RES,
-		UPLOAD_REQ, UPLOAD_RES
+		UPLOAD_REQ, UPLOAD_RES,
 	};
 
 	inline void do_ntoh(Complex *msg) {
@@ -98,6 +98,7 @@ namespace dto {
 		do_hton(&simple);
 		std::string str(sizeof(T) + payload_len, '\0');
 		memcpy(&str[0], &simple, sizeof(T) + payload_len);
+		do_ntoh(&simple);
 		return str;
 	}
 

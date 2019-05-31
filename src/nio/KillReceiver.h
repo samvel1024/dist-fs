@@ -31,7 +31,7 @@ public:
 	};
 
 	KillReceiver() : Subscriber("Fake") {
-		set_fd(-10);
+		set_fd(-12345678);
 		set_expected(0);
 	}
 };

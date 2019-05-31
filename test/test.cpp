@@ -1,9 +1,11 @@
 #define BOOST_TEST_MODULE SharedDirTests
 
 #include <boost/test/unit_test.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "../src/SharedDirectory.h"
 #include "../src/nio/Error.h"
+#include "../src/Dto.h"
 
 using namespace boost::filesystem;
 
@@ -76,3 +78,20 @@ BOOST_AUTO_TEST_CASE(TestFileCreation) {
 	BOOST_ASSERT(!dir.can_read_file(fname));
 }
 
+
+BOOST_AUTO_TEST_CASE(DtoConversion){
+	auto dto = dto::create_dto<dto::Simple>(0, 1);
+	strcpy(dto->cmd, "HELLO");
+	auto bytes = dto::marshall(*dto, 0);
+	auto des = dto::unmarshall<dto::Simple>(bytes, bytes.size());
+	BOOST_CHECK_EQUAL(des->cmd_seq, dto->cmd_seq);
+}
+
+BOOST_AUTO_TEST_CASE(HtonNtoh){
+	uint64_t val[] = {0, 1, 3, 15, 12361236, 5125847128};
+	for(auto v: val){
+		uint64_t hn = htonll(v);
+		uint64_t nh = ntohll(hn);
+		BOOST_CHECK_EQUAL(nh, v);
+	}
+}

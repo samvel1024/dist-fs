@@ -54,3 +54,13 @@ void Subscriber::set_dirty(bool dirty) {
 	this->dirty = dirty;
 }
 
+void Subscriber::disable() {
+	fd = -(abs(fd));
+	set_dirty(true);
+}
+
+void Subscriber::enable() {
+	fd = abs(fd);
+	set_dirty(true);
+}
+

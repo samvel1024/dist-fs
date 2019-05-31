@@ -94,7 +94,8 @@ void UDPServer::on_list(Poll &poll, dto::Simple &msg) {
 	memcpy(dto->payload, &resp[0], resp.size());
 	strcpy(dto->cmd, "MY_LIST");
 	std::cout << name << ": response " << *dto << std::endl;
-	no_err(sendto(fd, dto.get(), sizeof(dto::Simple) + resp.size(), 0, (struct sockaddr *) &current_client,
+	std::string serial = dto::marshall(*dto, resp.size());
+	no_err(sendto(fd, &serial[0], serial.size(), 0, (struct sockaddr *) &current_client,
 	              sockaddr_len), "Error in sendto");
 	//TODO need to split into packets
 }

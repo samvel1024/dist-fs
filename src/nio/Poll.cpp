@@ -1,6 +1,7 @@
 #include "Poll.h"
 #include <signal.h>
 #include <string.h>
+#include <cmath>
 
 const int YES = 1;
 

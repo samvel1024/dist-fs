@@ -13,6 +13,7 @@ add_library(Err
         )
 
 add_library(Nio
+        nio/SendBuffer.cpp nio/SendBuffer.h
         nio/Alarm.cpp nio/Alarm.h
         nio/Poll.cpp nio/Poll.h
         nio/TCPServer.cpp nio/TCPServer.h
@@ -30,7 +31,7 @@ target_link_libraries(Dir Err)
 add_executable(server server.cpp UDPServer.cpp UDPServer.h)
 target_link_libraries(server Nio Dir ${Boost_LIBRARIES})
 
-add_executable(client client.cpp CLIListener.cpp CLIListener.h)
+add_executable(client client.cpp CLIListener.cpp CLIListener.h MultiQuery.cpp MultiQuery.h)
 target_link_libraries(client Nio ${Boost_LIBRARIES})
 
 add_executable(packetgen packetgen.cpp)
