@@ -26,7 +26,7 @@ private:
 	uint64_t millis;
 
 public:
-	const std::function<void()> &get_callback() const;
+	void on_timeout() const;
 
 	Alarm(uint64_t millis, std::function<void()> callback);
 

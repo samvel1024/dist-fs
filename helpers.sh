@@ -3,6 +3,8 @@
 #SIK HELPERS
 
 export PATH=${PATH}:${SIKBLD}/src
+export MULTI_ADDR=239.13.41.5
+export MULTI_PORT=3000
 
 alias valgrind="valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes"
 
@@ -12,7 +14,7 @@ function sikbuild(){
 	cd $curr
 }
 
-function spawnservers(){
-	for i in $(seq 1 $1); do server $SIKIP $SIKPORT & done
-}
+#function spawnservers(){
+#	for i in $(seq 1 $1); do server $SIKIP $SIKPORT & done
+#}
 

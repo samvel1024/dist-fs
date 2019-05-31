@@ -34,7 +34,7 @@ void Poll::loop() {
 		if (changed_fds == 0) { //Timeout occured
 			uint64_t now = current_time_millis();
 			for (auto it = alarms.cbegin(); it != alarms.cend() && it->first <= now;) {
-				it->second->get_callback()();
+				it->second->on_timeout();
 				alarms.erase(it++);
 			}
 			continue;

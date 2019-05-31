@@ -12,6 +12,7 @@
 #include <iostream>
 #include <string.h>
 #include <sstream>
+#include <algorithm>
 #include "nio/Error.h"
 
 #ifdef __linux__

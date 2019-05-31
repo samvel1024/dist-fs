@@ -20,13 +20,6 @@ MultiQuery<REQ, RES>::MultiQuery(uint16_t port, std::string addr, int tm) :
 	no_err(setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (void *) &optval, sizeof optval), "setsockopt SO_BROADCAST");
 	optval = 4;
 	no_err(setsockopt(sock, IPPROTO_IP, IP_MULTICAST_TTL, (void *) &optval, sizeof optval), "setscokopt TTL");
-	optval = 0;
-	no_err(setsockopt(sock, IPPROTO_IP, IP_MULTICAST_LOOP, (void *) &optval, sizeof optval), "setsockopt loop");
-
-	local_address.sin_family = AF_INET;
-	local_address.sin_addr.s_addr = htonl(INADDR_ANY);
-	local_address.sin_port = htons(0);
-	no_err(bind(sock, (struct sockaddr *) &local_address, sizeof local_address), "Bind");
 
 	remote_address.sin_family = AF_INET;
 	remote_address.sin_port = htons(port);

@@ -4,7 +4,6 @@
 
 Subscriber::~Subscriber() {
 	if (this->fd >= 0) {
-		std::cout << "Closing fd for " << this->name << std::endl;
 		close(this->fd);
 	}
 }

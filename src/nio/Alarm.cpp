@@ -17,8 +17,9 @@ uint64_t Alarm::get_timeout_time() {
 	return millis;
 }
 
-const std::function<void()> &Alarm::get_callback() const {
-	return callback;
+void Alarm::on_timeout() const {
+	std::cout << "Alarm: expired" << std::endl;
+	callback();
 }
 
 uint64_t current_time_millis() {
