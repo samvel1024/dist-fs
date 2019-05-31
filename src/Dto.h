@@ -1,3 +1,5 @@
+#include <utility>
+
 #ifndef DISTFS_DTO_H
 #define DISTFS_DTO_H
 
@@ -92,6 +94,23 @@ namespace dto {
 		return ans;
 	}
 
+	template<typename T>
+	inline void init_common(T &s, std::string &payload, std::string cmd) {
+		if (cmd.size() > 10) {
+			throw Error("Too big cmd");
+		}
+		strcpy(s.cmd, &cmd[0]);
+		memcpy(s.payload, &payload[0], payload.size());
+	}
+
+	inline void init(Simple &s, std::string &payload, std::string cmd) {
+		init_common(s, payload, std::move(cmd));
+	}
+
+	inline void init(Complex &s, std::string &payload, std::string cmd, uint64_t param) {
+		init_common(s, payload, std::move(cmd));
+		s.param = param;
+	}
 
 	template<typename T>
 	inline std::string marshall(T &simple, int payload_len) {

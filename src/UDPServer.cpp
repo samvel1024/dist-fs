@@ -74,12 +74,10 @@ void UDPServer::on_hello(Poll &p, dto::Simple &msg) {
 	std::cout << name << ": request " << msg << std::endl;
 	std::string port_str = std::to_string(port);
 	auto resp = dto::create_dto<dto::Complex>(port_str.size(), msg.cmd_seq);
-	strcpy(resp->cmd, "GOOD_DAY");
-	//TODO htobe
-	resp->param = dir->get_remaining_space();
-	memcpy(resp->payload, &port_str[0], port_str.size());
+	dto::init(*resp, port_str, "GOOD_DAY", dir->get_remaining_space());
 	std::cout << name << ": response " << *resp << std::endl;
-	no_err(sendto(fd, resp.get(), sizeof(dto::Complex) + port_str.size(), 0, (struct sockaddr *) &current_client,
+	auto resp_str = dto::marshall(*resp, port_str.size());
+	no_err(sendto(fd, &resp_str[0], resp_str.size(), 0, (struct sockaddr *) &current_client,
 	              sockaddr_len), "Error in sendto");
 }
 
@@ -91,8 +89,7 @@ void UDPServer::on_list(Poll &poll, dto::Simple &msg) {
 		return;
 	}
 	auto dto = dto::create_dto<dto::Simple>(resp.size(), msg.cmd_seq);
-	memcpy(dto->payload, &resp[0], resp.size());
-	strcpy(dto->cmd, "MY_LIST");
+	dto::init(*dto, resp, "MY_LIST");
 	std::cout << name << ": response " << *dto << std::endl;
 	std::string serial = dto::marshall(*dto, resp.size());
 	no_err(sendto(fd, &serial[0], serial.size(), 0, (struct sockaddr *) &current_client,
