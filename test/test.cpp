@@ -79,12 +79,31 @@ BOOST_AUTO_TEST_CASE(TestFileCreation) {
 }
 
 
-BOOST_AUTO_TEST_CASE(DtoConversion){
-	auto dto = dto::create_dto<dto::Simple>(0, 1);
-	strcpy(dto->cmd, "HELLO");
-	auto bytes = dto::marshall(*dto, 0);
-	auto des = dto::unmarshall<dto::Simple>(bytes, bytes.size());
-	BOOST_CHECK_EQUAL(des->cmd_seq, dto->cmd_seq);
+BOOST_AUTO_TEST_CASE(DtoConversionSimple){
+	std::string pld = "ARJPUCT";
+	dto::Simple src_dto = dto::create(12, "HELLO", pld);
+	auto bytes = dto::marshall(src_dto);
+	auto des = dto::unmarshall<dto::Simple>(bytes);
+	BOOST_ASSERT(src_dto.header.cmd_seq == 12);
+	BOOST_ASSERT(dto::equals(src_dto, des));
+}
+
+BOOST_AUTO_TEST_CASE(DtoConversionComplex){
+	std::string pld = "JPUIACTARBABIKIACTLKKKCTHCCT";
+	dto::Complex src_dto = dto::create(123576123, "HELLO", pld, 12351909);
+	auto bytes = dto::marshall(src_dto);
+	auto des = dto::unmarshall<dto::Complex>(bytes);
+	BOOST_ASSERT(src_dto.header.cmd_seq == 123576123);
+	BOOST_ASSERT(dto::equals(src_dto, des));
+}
+
+BOOST_AUTO_TEST_CASE(DtoConversionEmptyPayload){
+	std::string pld;
+	dto::Complex src_dto = dto::create(123576123, "HELLO", pld, 12351909);
+	auto bytes = dto::marshall(src_dto);
+	auto des = dto::unmarshall<dto::Complex>(bytes);
+	BOOST_ASSERT(src_dto.header.cmd_seq == 123576123);
+	BOOST_ASSERT(dto::equals(src_dto, des));
 }
 
 BOOST_AUTO_TEST_CASE(HtonNtoh){

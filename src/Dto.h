@@ -28,19 +28,27 @@
 namespace dto {
 	constexpr int CMD_TYPE_LEN = 10;
 
-	struct Simple {
+	struct SimpleHeader {
 		char cmd[CMD_TYPE_LEN];
 		uint64_t cmd_seq;
-		char payload[0];
 	}__attribute__((packed));
 
 
-	struct Complex {
+	struct ComplexHeader {
 		char cmd[CMD_TYPE_LEN];
 		uint64_t cmd_seq;
 		uint64_t param;
-		char payload[0];
 	}__attribute__((packed));
+
+	struct Simple {
+		SimpleHeader header;
+		std::string payload;
+	};
+
+	struct Complex {
+		ComplexHeader header;
+		std::string payload;
+	};
 
 	enum Type {
 		TYPE_UNKNOWN = 0,
@@ -51,21 +59,21 @@ namespace dto {
 		UPLOAD_REQ, UPLOAD_RES,
 	};
 
-	inline void do_ntoh(Complex *msg) {
+	inline void do_ntoh(ComplexHeader *msg) {
 		msg->cmd_seq = ntohll(msg->cmd_seq);
 		msg->param = ntohll(msg->param);
 	}
 
-	inline void do_hton(Complex *msg) {
+	inline void do_hton(ComplexHeader *msg) {
 		msg->cmd_seq = htonll(msg->cmd_seq);
 		msg->param = htonll(msg->param);
 	}
 
-	inline void do_ntoh(Simple *msg) {
+	inline void do_ntoh(SimpleHeader *msg) {
 		msg->cmd_seq = ntohll(msg->cmd_seq);
 	}
 
-	inline void do_hton(Simple *msg) {
+	inline void do_hton(SimpleHeader *msg) {
 		msg->cmd_seq = htonll(msg->cmd_seq);
 	}
 
@@ -86,64 +94,76 @@ namespace dto {
 	}
 
 	template<typename T>
-	inline std::shared_ptr<T> create_dto(int payload_size, uint64_t seq) {
-		char *mem = (char *) malloc(sizeof(T) + payload_size + 1);
-		bzero(mem, sizeof(T) + payload_size + 1);
-		std::shared_ptr<T> ans(reinterpret_cast<T *>(mem), free);
-		ans->cmd_seq = seq;
-		return ans;
+	inline T create_dto_common(uint64_t cmd_seq, std::string cmd, std::string &payload) {
+		T dto;
+		bzero(dto.header.cmd, CMD_TYPE_LEN);
+		dto.payload = std::move(payload);
+		strcpy(dto.header.cmd, &cmd[0]);
+		dto.header.cmd_seq = cmd_seq;
+		return dto;
+	}
+
+	inline Complex create(uint64_t cmd_seq, std::string cmd, std::string &payload, uint64_t param) {
+		auto dto = create_dto_common<Complex>(cmd_seq, std::move(cmd), payload);
+		dto.header.param = param;
+		return dto;
+	}
+
+	inline Simple create(uint64_t cmd_seq, std::string cmd, std::string &payload) {
+		return create_dto_common<Simple>(cmd_seq, cmd, payload);
 	}
 
 	template<typename T>
-	inline void init_common(T &s, std::string &payload, std::string cmd) {
-		if (cmd.size() > 10) {
-			throw Error("Too big cmd");
-		}
-		strcpy(s.cmd, &cmd[0]);
-		memcpy(s.payload, &payload[0], payload.size());
-	}
-
-	inline void init(Simple &s, std::string &payload, std::string cmd) {
-		init_common(s, payload, std::move(cmd));
-	}
-
-	inline void init(Complex &s, std::string &payload, std::string cmd, uint64_t param) {
-		init_common(s, payload, std::move(cmd));
-		s.param = param;
-	}
-
-	template<typename T>
-	inline std::string marshall(T &simple, int payload_len) {
-		do_hton(&simple);
-		std::string str(sizeof(T) + payload_len, '\0');
-		memcpy(&str[0], &simple, sizeof(T) + payload_len);
-		do_ntoh(&simple);
+	inline std::string marshall(T &dto) {
+		do_hton(&(dto.header));
+		int hdr_size = sizeof(decltype(dto.header));
+		std::string str(hdr_size + dto.payload.size(), '\0');
+		memcpy(&str[0], &(dto.header), hdr_size);
+		memcpy(&str[hdr_size], &dto.payload[0], dto.payload.size());
+		do_ntoh(&(dto.header));
 		return str;
 	}
 
 	template<typename T>
-	inline std::shared_ptr<T> unmarshall(std::string &payload, int len) {
-		if (len < sizeof(T)) {
-			throw Error("Packet too small");
+	inline T unmarshall(std::string &packet) {
+		T dto;
+		int hdr_size = sizeof(decltype(dto.header));
+		if (packet.size() < hdr_size) {
+			throw Error("Too small packet");
 		}
-		char *mem = (char *) malloc(len + 1);
-		mem[len] = '\0';
-		std::shared_ptr<T> sp(reinterpret_cast<T *>(mem), free);
-		memcpy(sp.get(), &payload[0], len);
-		do_ntoh(sp.get());
-		return sp;
+		memcpy(&dto.header, &packet[0], hdr_size);
+		dto.payload = std::string(packet.size() - hdr_size, '\0');
+		memcpy(&dto.payload[0], &packet[hdr_size], packet.size() - hdr_size);
+		do_ntoh(&dto.header);
+		return dto;
+	}
+
+	template<typename T>
+	inline bool equals(T &l, T &r) {
+		int mcp = memcmp(&l.header, &r.header, sizeof(decltype(l.header)));
+		return mcp == 0 && l.payload == r.payload;
 	}
 
 }
 
 
 inline std::ostream &operator<<(std::ostream &os, const dto::Simple &m) {
-	return os << "dto::Simple{cmd='" << m.cmd << "', cmd_seq=" << m.cmd_seq << ", payload='" << m.payload << "'}";
+	return os << "dto::Simple{cmd='" << m.header.cmd << "', cmd_seq=" << m.header.cmd_seq << ", payload='" << m.payload
+	          << "'}";
 }
 
 inline std::ostream &operator<<(std::ostream &os, const dto::Complex &m) {
-	return os << "dto::Complex{cmd='" << m.cmd << "', cmd_seq=" << m.cmd_seq << ", param=" << m.param << ", payload='"
+	return os << "dto::Complex{cmd='" << m.header.cmd << "', cmd_seq=" << m.header.cmd_seq << ", param=" << m.header.param
+	          << ", payload='"
 	          << m.payload << "'}";
+}
+
+inline bool operator==(const dto::Simple &lhs, const dto::Simple &rhs) {
+	return dto::equals(lhs, rhs);
+}
+
+inline bool operator==(const dto::Complex &lhs, const dto::Complex &rhs) {
+	return dto::equals(lhs, rhs);
 }
 
 
