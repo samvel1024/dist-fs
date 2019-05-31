@@ -16,6 +16,7 @@ private:
 	std::unordered_map<std::string, int> commands;
 
 	void exec_command(Poll &p, std::string &type, std::string &arg);
+
 public:
 
 	CLIListener(uint16_t port, boost::filesystem::path out_dir, int timeout_sec,
@@ -28,7 +29,8 @@ public:
 	void do_discover(Poll &p);
 
 	void do_search(Poll &p, std::string &str);
-};
 
+	void unblock_input(Poll &p);
+};
 
 #endif //DISTFS_CLILISTENER_H

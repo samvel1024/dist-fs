@@ -56,26 +56,26 @@ void CLIListener::exec_command(Poll &p, std::string &type, std::string &arg) {
 	}
 }
 
+void CLIListener::unblock_input(Poll &p){
+	set_expected(POLLIN);
+	p.notify_subscriber_changed(*this);
+	std::cout << "UNBLOCK" << &p << " " << this << std::endl;
+}
+
 void CLIListener::do_search(Poll &p, std::string &arg) {
 	this->set_expected(0);
 	p.notify_subscriber_changed(*this);
 	auto query = std::make_shared<MultiQuery<dto::Simple, dto::Simple>>(port, mcast_addr, timeout_sec * 1000);
 	p.subscribe(query);
 	auto reqdto = dto::create(this->cmd_seq++, "LIST", arg);
-	CLIListener *self = this;
+	std::cout << &p << " jpu " << this << std::endl;
+
+	auto unblock = std::bind(&CLIListener::unblock_input, this, std::ref(p));
 	query->execute(
 		reqdto,
 		[](dto::Simple &resp, sockaddr_in addr) -> void {
 			std::cout << "Resp: " << resp << std::endl;
-		},
-		[&p, self]() {
-			self->set_expected(POLLIN);
-			p.notify_subscriber_changed(*self);
-		},
-		[&p, self]() {
-			self->set_expected(POLLIN);
-			p.notify_subscriber_changed(*self);
-		});
+		}, unblock, unblock);
 }
 
 void CLIListener::do_discover(Poll &p) {
@@ -86,20 +86,12 @@ void CLIListener::do_discover(Poll &p) {
 	p.subscribe(query);
 	auto empty = std::string();
 	auto dto = dto::create(cmd_seq++, "HELLO", empty);
-	CLIListener *self = this;
+	auto unblock = std::bind(&CLIListener::unblock_input, this, p);
 	query->execute(
 		dto,
 		[](dto::Complex &resp, sockaddr_in addr) -> void {
 			std::cout << "Resp: " << resp << std::endl;
-		},
-		[&p, self]() {
-			self->set_expected(POLLIN);
-			p.notify_subscriber_changed(*self);
-		},
-		[&p, self]() {
-			self->set_expected(POLLIN);
-			p.notify_subscriber_changed(*self);
-		});
+		}, unblock, unblock);
 }
 
 
