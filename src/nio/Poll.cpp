@@ -40,7 +40,7 @@ void Poll::loop() {
 			continue;
 		}
 		for (int i = 0; i < fds.size(); ++i) {
-			auto &fd = fds[i];
+			auto fd = fds[i];
 			if (fd.revents == 0) continue;
 			auto listener_itr = this->subs.find(fd.fd);
 			if (listener_itr == this->subs.end()) {

@@ -15,12 +15,11 @@ class Alarm;
 
 class Poll {
 private:
-	static constexpr int WAIT_QUANTUM = 10;
+	static constexpr int WAIT_QUANTUM = 100;
 	std::vector<pollfd> fds;
 	std::unordered_map<int, std::shared_ptr<Subscriber>> subs;
 	std::map<uint64_t, std::shared_ptr<Alarm>> alarms;
 	bool shutdown;
-
 
 public:
 

@@ -4,6 +4,8 @@
 
 export PATH=${PATH}:${SIKBLD}/src
 
+alias valgrind="valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes"
+
 function sikbuild(){
 	curr=$(pwd)
 	cd ${SIKBLD} && make -j8
