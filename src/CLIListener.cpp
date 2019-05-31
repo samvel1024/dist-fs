@@ -59,21 +59,14 @@ void CLIListener::exec_command(Poll &p, std::string &type, std::string &arg) {
 void CLIListener::do_search(Poll &p, std::string &arg) {
 	this->set_expected(0);
 	p.notify_subscriber_changed(*this);
-	std::shared_ptr<MultiQuery> query = std::make_shared<MultiQuery>(port, mcast_addr, timeout_sec * 1000);
+	auto query = std::make_shared<MultiQuery<dto::Simple, dto::Simple>>(port, mcast_addr, timeout_sec * 1000);
 	p.subscribe(query);
-	uint64_t seq = cmd_seq++;
-	auto dto = dto::create_dto<dto::Simple>(arg.size(), seq);
-	dto::init_common(*dto, arg, "LIST");
-	std::string pld = dto::marshall(*dto, arg.size());
+	auto reqdto = dto::create(this->cmd_seq++, "LIST", arg);
 	CLIListener *self = this;
 	query->execute(
-		pld,
-		[seq](std::string &resp, sockaddr_in addr) -> void {
-			auto resp_dto = dto::unmarshall<dto::Simple>(resp, resp.size());
-			if (resp_dto->cmd_seq != seq) {
-				throw Error("Illegal packet, cmd_seq, expected %llu got %llu", seq, resp_dto->cmd_seq);
-			}
-			std::cout << "Resp: " << resp_dto->payload << std::endl;
+		reqdto,
+		[](dto::Simple &resp, sockaddr_in addr) -> void {
+			std::cout << "Resp: " << resp << std::endl;
 		},
 		[&p, self]() {
 			self->set_expected(POLLIN);
@@ -89,23 +82,15 @@ void CLIListener::do_discover(Poll &p) {
 	this->set_expected(0);
 	p.notify_subscriber_changed(*this);
 
-	auto query = std::make_shared<MultiQuery>(port, mcast_addr, timeout_sec * 1000);
+	auto query = std::make_shared<MultiQuery<dto::Simple, dto::Complex>>(port, mcast_addr, timeout_sec * 1000);
 	p.subscribe(query);
-
-	auto seq = cmd_seq++;
-	auto dto = dto::create_dto<dto::Simple>(0, seq);
-	std::string empty;
-	dto::init(*dto, empty, "HELLO");
-	auto pld = dto::marshall(*dto, 0);
+	auto empty = std::string();
+	auto dto = dto::create(cmd_seq++, "HELLO", empty);
 	CLIListener *self = this;
 	query->execute(
-		pld,
-		[seq](std::string &resp, sockaddr_in addr) -> void {
-			auto resp_dto = dto::unmarshall<dto::Complex>(resp, resp.size());
-			if (resp_dto->cmd_seq != seq) {
-				throw Error("Ilegal packet ..");
-			}
-			std::cout << "Resp: " << resp_dto->payload << std::endl;
+		dto,
+		[](dto::Complex &resp, sockaddr_in addr) -> void {
+			std::cout << "Resp: " << resp << std::endl;
 		},
 		[&p, self]() {
 			self->set_expected(POLLIN);
@@ -115,8 +100,6 @@ void CLIListener::do_discover(Poll &p) {
 			self->set_expected(POLLIN);
 			p.notify_subscriber_changed(*self);
 		});
-
-
 }
 
 

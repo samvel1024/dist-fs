@@ -43,16 +43,35 @@ void UDPServer::on_input(Poll &p) {
 //	no_err(sendto(fd, &resp[0], resp.size(), 0, (struct sockaddr *) &clientaddr, clientlen), "Error in sendto");
 }
 
+
+template <typename T>
+T parse(std::string data){
+	T dto = dto::unmarshall<T>(data);
+	std::cout << "UDPServer: received " << dto << std::endl;
+	return dto;
+}
+
+template <typename T>
+void write(int sock, T dto, sockaddr_in addr){
+	std::cout << "UDPServer: responding " << dto << std::endl;
+	auto resp_str = dto::marshall(dto);
+	socklen_t len = sizeof(addr);
+	no_err(sendto(sock, &resp_str[0], resp_str.size(), 0, (struct sockaddr *) &addr, len), "Error in sendto");
+}
+
 void UDPServer::on_dispatch(Poll &p, int bytes_read) {
 	std::string type_header = buffer.substr(0, dto::CMD_TYPE_LEN);
+	std::string data = buffer.substr(0, bytes_read);
 	try {
 		switch (dto::from_header(type_header)) {
 			case dto::HELLO_REQ : {
-				on_hello(p, *(dto::unmarshall<dto::Simple>(buffer, bytes_read)));
+				auto dto = parse<dto::Simple>(data);
+				on_hello(p, dto);
 				break;
 			}
 			case dto::LIST_REQ : {
-				on_list(p, *(dto::unmarshall<dto::Simple>(buffer, bytes_read)));
+				auto dto = parse<dto::Simple>(data);
+				on_list(p, dto);
 				break;
 			}
 			default : {
@@ -68,33 +87,23 @@ void UDPServer::on_dispatch(Poll &p, int bytes_read) {
 
 
 void UDPServer::on_hello(Poll &p, dto::Simple &msg) {
-	if (strlen(msg.payload) != 0) {
+	if (msg.payload.size() != 0) {
 		throw Error("Hello should not have a payload");
 	}
-	std::cout << name << ": request " << msg << std::endl;
 	std::string port_str = std::to_string(port);
-	auto resp = dto::create_dto<dto::Complex>(port_str.size(), msg.cmd_seq);
-	dto::init(*resp, port_str, "GOOD_DAY", dir->get_remaining_space());
-	std::cout << name << ": response " << *resp << std::endl;
-	auto resp_str = dto::marshall(*resp, port_str.size());
-	no_err(sendto(fd, &resp_str[0], resp_str.size(), 0, (struct sockaddr *) &current_client,
-	              sockaddr_len), "Error in sendto");
+	auto resp = dto::create(msg.header.cmd_seq, "GOOD_DAY", port_str, dir->get_remaining_space());
+	write(fd, resp, current_client);
 }
 
 void UDPServer::on_list(Poll &poll, dto::Simple &msg) {
-	std::string query(msg.payload);
-	std::string resp = dir->search_file(query);
-	std::cout << name << ": request " << msg << std::endl;
-	if (resp.empty()) {
+	std::string query = std::move(msg.payload);
+	std::string resp_payload = dir->search_file(query);
+	if (resp_payload.empty()) {
 		return;
 	}
-	auto dto = dto::create_dto<dto::Simple>(resp.size(), msg.cmd_seq);
-	dto::init(*dto, resp, "MY_LIST");
-	std::cout << name << ": response " << *dto << std::endl;
-	std::string serial = dto::marshall(*dto, resp.size());
-	no_err(sendto(fd, &serial[0], serial.size(), 0, (struct sockaddr *) &current_client,
-	              sockaddr_len), "Error in sendto");
+	auto resp = dto::create(msg.header.cmd_seq, "MY_LIST", resp_payload);
 	//TODO need to split into packets
+	write(fd, resp, current_client);
 }
 
 void UDPServer::on_output(Poll &p) {

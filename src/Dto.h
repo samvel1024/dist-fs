@@ -41,12 +41,12 @@ namespace dto {
 	}__attribute__((packed));
 
 	struct Simple {
-		SimpleHeader header;
+		SimpleHeader header{};
 		std::string payload;
 	};
 
 	struct Complex {
-		ComplexHeader header;
+		ComplexHeader header{};
 		std::string payload;
 	};
 
@@ -144,18 +144,24 @@ namespace dto {
 		return mcp == 0 && l.payload == r.payload;
 	}
 
+	inline std::string pretty_payload(const std::string &pld) {
+		std::string short_pld = pld.substr(0, 20);
+		std::replace(short_pld.begin(), short_pld.end(), '\n', '|');
+		return short_pld.empty() ? short_pld : short_pld + "...";
+	}
 }
 
 
 inline std::ostream &operator<<(std::ostream &os, const dto::Simple &m) {
-	return os << "dto::Simple{cmd='" << m.header.cmd << "', cmd_seq=" << m.header.cmd_seq << ", payload='" << m.payload
+	return os << "Simple{cmd='" << m.header.cmd << "', cmd_seq=" << m.header.cmd_seq << ", payload='"
+	          << dto::pretty_payload(m.payload)
 	          << "'}";
 }
 
 inline std::ostream &operator<<(std::ostream &os, const dto::Complex &m) {
-	return os << "dto::Complex{cmd='" << m.header.cmd << "', cmd_seq=" << m.header.cmd_seq << ", param=" << m.header.param
+	return os << "Complex{cmd='" << m.header.cmd << "', cmd_seq=" << m.header.cmd_seq << ", param=" << m.header.param
 	          << ", payload='"
-	          << m.payload << "'}";
+	          << dto::pretty_payload(m.payload) << "'}";
 }
 
 inline bool operator==(const dto::Simple &lhs, const dto::Simple &rhs) {

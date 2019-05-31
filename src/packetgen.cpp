@@ -20,20 +20,13 @@ int main() {
 
 	std::string serial;
 	if (is_simple) {
-		auto dto = create_dto<Simple>(payload.size(), 0);
-		strcpy(dto->cmd, &cmd[0]);
-		dto->cmd_seq = seq;
-		strcpy(dto->payload, &payload[0]);
-		std::cerr << "[PACKETGEN] " << *dto << std::endl;
-		serial = marshall(*dto, payload.size());
+		Simple dto = create(seq, cmd, payload);
+		std::cerr << "[PACKETGEN] " << dto << std::endl;
+		serial = marshall(dto);
 	} else {
-		auto dto = create_dto<Complex>(payload.size(), 0);
-		strcpy(dto->cmd, &cmd[0]);
-		dto->cmd_seq = seq;
-		dto->param = param;
-		strcpy(dto->payload, &payload[0]);
-		std::cerr << "[PACKETGEN] " << *dto << std::endl;
-		serial = marshall(*dto, payload.size());
+		Complex dto = create(seq, cmd, payload, param);
+		std::cerr << "[PACKETGEN] " << dto << std::endl;
+		serial = marshall(dto);
 	}
 
 	std::cout << serial;

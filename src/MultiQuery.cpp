@@ -4,10 +4,12 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include "Dto.h"
 
 std::string buffer(100000, '\0');
 
-MultiQuery::MultiQuery(uint16_t port, std::string addr, int tm) :
+template<class REQ, class RES>
+MultiQuery<REQ, RES>::MultiQuery(uint16_t port, std::string addr, int tm) :
 	Subscriber("MultiQuery"), req(), addr(addr), timeout(tm) {
 
 	struct sockaddr_in remote_address{}, local_address{};
@@ -34,18 +36,11 @@ MultiQuery::MultiQuery(uint16_t port, std::string addr, int tm) :
 	set_expected(POLLOUT);
 }
 
-void
-MultiQuery::execute(const std::string &req_str, std::function<void(std::string &, sockaddr_in)> callback,
-                    std::function<void()> error,
-                    std::function<void()> done) {
-	this->req = req_str;
-	this->callback = std::move(callback);
-	this->error = std::move(error);
-	this->done = std::move(done);
-}
 
-void MultiQuery::on_output(Poll &p) {
-	if (sendto(fd, &req[0], req.size(), 0, (struct sockaddr *) &remote, sizeof(remote)) != req.size()) {
+template<class REQ, class RES>
+void MultiQuery<REQ, RES>::on_output(Poll &p) {
+	auto data = dto::marshall(this->req);
+	if (sendto(fd, &data[0], data.size(), 0, (struct sockaddr *) &remote, sizeof(remote)) != data.size()) {
 		throw Error("Could not write");
 	}
 	set_expected(POLLIN);
@@ -58,20 +53,50 @@ void MultiQuery::on_output(Poll &p) {
 	}
 }
 
-void MultiQuery::on_input(Poll &p) {
+template<class REQ, class RES>
+void MultiQuery<REQ, RES>::on_input(Poll &p) {
 	socklen_t remln = sizeof(remote);
 	int read = recvfrom(fd, &buffer[0], buffer.size(), 0, (struct sockaddr *) &remote, &remln);
 	if (read < 0) {
 		throw Error("Invalid read udp packet");
 	}
 	std::string data = buffer.substr(0, read);
-	this->callback(data, remote);
+	auto dto = dto::unmarshall<RES>(data);
+	if (dto.header.cmd_seq != this->req.header.cmd_seq) {
+		this->error();
+	} else {
+		this->callback(dto, remote);
+	}
 	if (this->timeout == 0) {
 		this->done();
 	}
 }
 
-void MultiQuery::on_error(Poll &p, int event) {
+template<class REQ, class RES>
+void MultiQuery<REQ, RES>::on_error(Poll &p, int event) {
 	this->error();
 	Subscriber::on_error(p, event);
 }
+
+template<typename REQ, typename RES>
+void MultiQuery<REQ, RES>::execute(REQ &req, std::function<void(RES &, sockaddr_in)> callback,
+                                   std::function<void(void)> error, std::function<void(void)> done) {
+	this->req = std::move(req);
+	this->callback = std::move(callback);
+	this->error = std::move(error);
+	this->done = std::move(done);
+}
+
+
+// Nasty hack to avoid writing all in header file
+template
+class MultiQuery<dto::Simple, dto::Complex>;
+
+template
+class MultiQuery<dto::Simple, dto::Simple>;
+
+template
+class MultiQuery<dto::Complex, dto::Complex>;
+
+template
+class MultiQuery<dto::Complex, dto::Simple>;

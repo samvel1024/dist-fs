@@ -8,10 +8,10 @@
 #include "nio/Subscriber.h"
 #include <functional>
 
-
+template<class REQ, class RES>
 class MultiQuery : public Subscriber {
-	std::string req;
-	std::function<void(std::string&, sockaddr_in)> callback;
+	REQ req;
+	std::function<void(RES &, sockaddr_in)> callback;
 	std::function<void(void)> error;
 	std::function<void(void)> done;
 	std::string addr;
@@ -20,7 +20,7 @@ class MultiQuery : public Subscriber {
 public:
 	MultiQuery(uint16_t port, std::string addr, int timeout);
 
-	void execute(const std::string &req_str, std::function<void(std::string &, sockaddr_in)> callback,
+	void execute(REQ &req_str, std::function<void(RES &, sockaddr_in)> callback,
 	             std::function<void(void)> error,
 	             std::function<void(void)> done);
 
