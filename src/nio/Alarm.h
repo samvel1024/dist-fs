@@ -5,10 +5,8 @@
 #ifndef DISTFS_ALARM_H
 #define DISTFS_ALARM_H
 
-
 #include "Subscriber.h"
 #include <functional>
-
 
 /**
  * Since BSD and MacOS don't have the timerfd_create syscall,
@@ -18,23 +16,21 @@
 
 uint64_t current_time_millis();
 
-
 class Alarm {
-private:
-	std::function<void()> callback;
-private:
-	uint64_t millis;
+ private:
+  std::function<void()> callback;
+ private:
+  uint64_t millis;
 
-public:
-	void on_timeout() const;
+ public:
+  void on_timeout() const;
 
-	Alarm(uint64_t millis, std::function<void()> callback);
+  Alarm(uint64_t millis, std::function<void()> callback);
 
-	uint64_t get_timeout_time();
+  uint64_t get_timeout_time();
 
-	~Alarm() = default;
+  ~Alarm() = default;
 
 };
-
 
 #endif //DISTFS_ALARM_H

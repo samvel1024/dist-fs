@@ -23,20 +23,18 @@
 #include <sys/ioctl.h>
 
 struct Error : std::exception {
-	char text[1000];
+  char text[1000];
 
-	explicit Error(char const *fmt, ...) __attribute__((format(printf, 2, 3)));
+  explicit Error(char const *fmt, ...) __attribute__((format(printf, 2, 3)));
 
-	char const *what() const noexcept override;
+  char const *what() const noexcept override;
 };
 
 struct IllegalPacket : std::exception {
 };
 
-
 std::string from_errno();
 
 int no_err(int val, const char *msg);
-
 
 #endif

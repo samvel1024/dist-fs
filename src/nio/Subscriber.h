@@ -11,40 +11,40 @@
 class Poll;
 
 class Subscriber {
-protected:
-	bool dirty;
-	int fd{};
-	short expected{};
-	std::string name;
-public:
+ protected:
+  bool dirty;
+  int fd{};
+  short expected{};
+  std::string name;
+ public:
 
-	virtual void on_error(Poll &p, int event);
+  virtual void on_error(Poll &p, int event);
 
-	virtual void on_input(Poll &p);
+  virtual void on_input(Poll &p);
 
-	virtual void on_output(Poll &p);
+  virtual void on_output(Poll &p);
 
-	virtual ~Subscriber();
+  virtual ~Subscriber();
 
-	void disable();
+  void disable();
 
-	void enable();
+  void enable();
 
-	int get_fd() const;
+  int get_fd() const;
 
-	void set_fd(int mdf);
+  void set_fd(int mdf);
 
-	short get_mask() const;
+  short get_mask() const;
 
-	void set_expected(short mmask);
+  void set_expected(short mmask);
 
-	const std::string &get_name() const;
+  const std::string &get_name() const;
 
-	explicit Subscriber(std::string name);
+  explicit Subscriber(std::string name);
 
-	bool is_dirty() const;
+  bool is_dirty() const;
 
-	void set_dirty(bool dirty);
+  void set_dirty(bool dirty);
 };
 
 #endif //DISTFS_SUBSCRIBER_H

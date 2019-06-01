@@ -34,6 +34,9 @@ target_link_libraries(server Nio Dir ${Boost_LIBRARIES})
 add_executable(client client.cpp CLIListener.cpp CLIListener.h MultiQuery.cpp MultiQuery.h)
 target_link_libraries(client Nio ${Boost_LIBRARIES})
 
+add_executable(tcpserver tcpserver.cpp FileDownloadSession.cpp FileDownloadSession.h)
+target_link_libraries(tcpserver Nio ${Boost_LIBRARIES})
+
 add_executable(packetgen packetgen.cpp)
 target_link_libraries(packetgen Dto)
 

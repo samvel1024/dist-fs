@@ -12,11 +12,11 @@
 class KillReceiver : public Subscriber {
 public:
 
-	void on_input(Poll &p) override;
+    void on_input(Poll &p) override;
 
-	void on_output(Poll &p) override;
+    void on_output(Poll &p) override;
 
-	KillReceiver();
+    KillReceiver();
 };
 
 #else
@@ -25,15 +25,15 @@ public:
  * BSD and MacOS systems dont have signalfd syscall
  */
 class KillReceiver : public Subscriber {
-public:
-	virtual ~KillReceiver() {
+ public:
+  virtual ~KillReceiver() {
 
-	};
+  };
 
-	KillReceiver() : Subscriber("Fake") {
-		set_fd(-12345678);
-		set_expected(0);
-	}
+  KillReceiver() : Subscriber("Fake") {
+    set_fd(-12345678);
+    set_expected(0);
+  }
 };
 
 #endif

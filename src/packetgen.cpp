@@ -3,7 +3,6 @@
 #include <iostream>
 #include <string>
 
-
 using namespace dto;
 
 /*
@@ -11,25 +10,25 @@ using namespace dto;
  */
 
 int main() {
-	int is_simple;
-	uint64_t param, seq;
-	std::string payload, cmd;
-	std::getline(std::cin, cmd);
-	std::getline(std::cin, payload);
-	std::cin >> is_simple >> param >> seq;
+  int is_simple;
+  uint64_t param, seq;
+  std::string payload, cmd;
+  std::getline(std::cin, cmd);
+  std::getline(std::cin, payload);
+  std::cin >> is_simple >> param >> seq;
 
-	std::string serial;
-	if (is_simple) {
-		Simple dto = create(seq, cmd, payload);
-		std::cerr << "[PACKETGEN] " << dto << std::endl;
-		serial = marshall(dto);
-	} else {
-		Complex dto = create(seq, cmd, payload, param);
-		std::cerr << "[PACKETGEN] " << dto << std::endl;
-		serial = marshall(dto);
-	}
+  std::string serial;
+  if (is_simple) {
+    Simple dto = create(seq, cmd, payload);
+    std::cerr << "[PACKETGEN] " << dto << std::endl;
+    serial = marshall(dto);
+  } else {
+    Complex dto = create(seq, cmd, payload, param);
+    std::cerr << "[PACKETGEN] " << dto << std::endl;
+    serial = marshall(dto);
+  }
 
-	std::cout << serial;
+  std::cout << serial;
 
-	return 0;
+  return 0;
 }

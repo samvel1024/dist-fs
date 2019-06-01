@@ -11,13 +11,12 @@
 class TCPServer;
 
 class TCPSessionFactory {
-public:
-	virtual std::shared_ptr<Subscriber> create_session(TCPServer &serv, int fd) = 0;
+ public:
+  virtual std::shared_ptr<Subscriber> create_session(TCPServer &serv, int fd) = 0;
 
-	TCPSessionFactory() = default;
+  TCPSessionFactory() = default;
 
-	virtual ~TCPSessionFactory() = default;
+  virtual ~TCPSessionFactory() = default;
 };
-
 
 #endif //DISTFS_TCPSESSIONFACTORY_H

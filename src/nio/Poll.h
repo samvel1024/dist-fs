@@ -11,32 +11,32 @@
 #include <map>
 
 class Subscriber;
+
 class Alarm;
 
 class Poll {
-private:
-	static constexpr int WAIT_QUANTUM = 100;
-	std::vector<pollfd> fds;
-	std::unordered_map<int, std::shared_ptr<Subscriber>> subs;
-	std::map<uint64_t, std::shared_ptr<Alarm>> alarms;
-	bool shutdown;
+ private:
+  static constexpr int WAIT_QUANTUM = 100;
+  std::vector<pollfd> fds;
+  std::unordered_map<int, std::shared_ptr<Subscriber>> subs;
+  std::map<uint64_t, std::shared_ptr<Alarm>> alarms;
+  bool shutdown;
 
-public:
+ public:
 
-	Poll &subscribe(std::shared_ptr<Subscriber> sub);
+  Poll &subscribe(std::shared_ptr<Subscriber> sub);
 
-	Poll &subscribe_alarm(std::shared_ptr<Alarm> alarm);
+  Poll &subscribe_alarm(std::shared_ptr<Alarm> alarm);
 
-	void unsubscribe(Subscriber &sub);
+  void unsubscribe(Subscriber &sub);
 
-	void loop();
+  void loop();
 
-	void do_shutdown();
+  void do_shutdown();
 
-	void notify_subscriber_changed(Subscriber &s);
+  void notify_subscriber_changed(Subscriber &s);
 
-	Poll();
+  Poll();
 };
-
 
 #endif //DISTFS_POLL_H

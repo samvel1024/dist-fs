@@ -12,45 +12,44 @@
 
 class SharedDirectory {
 
-private:
-	std::map<std::string, long> indexed_files;
-	std::map<std::string, long> pending_files;
-	boost::filesystem::path shared_dir;
-	const long total_space;
-	long remaining_space{};
+ private:
+  std::map<std::string, long> indexed_files;
+  std::map<std::string, long> pending_files;
+  boost::filesystem::path shared_dir;
+  const long total_space;
+  long remaining_space{};
 
-private:
+ private:
 
-	void index_files();
+  void index_files();
 
-	boost::filesystem::path path_in_dir(std::string p);
+  boost::filesystem::path path_in_dir(std::string p);
 
-public:
+ public:
 
-	SharedDirectory(const std::string &p, long sp);
+  SharedDirectory(const std::string &p, long sp);
 
-	std::map<std::string, long> get_files();
+  std::map<std::string, long> get_files();
 
-	long get_remaining_space() const;
+  long get_remaining_space() const;
 
-	void reserve_file(const std::string &, long size);
+  void reserve_file(const std::string &, long size);
 
-	bool can_create_file(long size, const std::string &name);
+  bool can_create_file(long size, const std::string &name);
 
-	void cancel_reserved_file(const std::string &f);
+  void cancel_reserved_file(const std::string &f);
 
-	boost::filesystem::fstream open_writable_file(const std::string &name);
+  boost::filesystem::fstream open_writable_file(const std::string &name);
 
-	void on_finished_writing(std::string name);
+  void on_finished_writing(std::string name);
 
-	bool can_read_file(const std::string &name);
+  bool can_read_file(const std::string &name);
 
-	boost::filesystem::fstream open_readable_file(const std::string &name);
+  boost::filesystem::fstream open_readable_file(const std::string &name);
 
-	void delete_file(const std::string &name);
+  void delete_file(const std::string &name);
 
-	std::string search_file(const std::string &query);
+  std::string search_file(const std::string &query);
 };
-
 
 #endif //DISTFS_SHAREDDIRECTORY_H

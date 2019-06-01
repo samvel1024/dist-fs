@@ -7,35 +7,29 @@
 
 #include "nio/TCPServer.h"
 #include "nio/TCPSessionFactory.h"
+#include "nio/SendBuffer.h"
+#include <boost/filesystem.hpp>
+
+namespace fs = boost::filesystem;
 
 class FileDownloadSession : public Subscriber {
 
-private:
-	static constexpr int BUFLEN = 10000;
-	char buffer[BUFLEN]{};
-	int buf_sent{};
-	int buf_size{};
+ private:
+  int timeout;
+  SendBuffer buff;
+  fs::fstream stream;
+ public:
 
-public:
+  void on_input(Poll &p) override;
 
-	void on_input(Poll &p) override;
+  void on_output(Poll &p) override;
 
-	void on_output(Poll &p) override;
+  ~FileDownloadSession() override;
 
-	~FileDownloadSession() override = default;
+  explicit FileDownloadSession(const fs::path &file, int timeout);
 
-	explicit FileDownloadSession(std::string nm, int fd);
+  static TCPServer::SessionFactory create_session_factory(const fs::path &p, int timeout);
+
 };
-
-
-class FTSessionFactory : public TCPSessionFactory {
-public:
-	std::shared_ptr<Subscriber> create_session(TCPServer &serv, int fd) override;
-
-	explicit FTSessionFactory();
-
-	~FTSessionFactory() override;
-};
-
 
 #endif //DISTFS_FILEDOWNLOADSESSION_H
