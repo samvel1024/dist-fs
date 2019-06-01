@@ -12,6 +12,7 @@
 #include <algorithm>
 #include "MultiQuery.h"
 #include "FileReceiveSession.h"
+#include "FileSendSession.h"
 
 using namespace std::placeholders;
 namespace fs = boost::filesystem;
@@ -67,7 +68,7 @@ void CLIListener::exec_command(Poll &p, std::string &type, std::string &arg) {
   }
 }
 
-void print_prompt(){
+void print_prompt() {
   std::cout << "ENTER A COMMAND:" << std::endl;
 }
 
@@ -191,37 +192,48 @@ std::string CLIListener::get_largest_server() {
   return ans;
 }
 
-void CLIListener::on_upload_result(Poll &p, dto::Complex &dto, sockaddr_in ad) {
-  std::cout << "Got " << dto << std::endl;
+void CLIListener::on_upload_result(Poll &p, dto::Complex &dto, sockaddr_in ad, boost::filesystem::path file) {
+  std::string hdr = dto.header.cmd;
+  auto server = get_ip(ad);
+  dto::Type t = dto::from_header(hdr);
+  if (t != dto::Type::UPLOAD_RES_OK) { // Dirty way to avoid having custom deserialization in MultiQuery
+    std::cout << "File " << file.string() << " uploading failed (" << server << ":" << ntohs(ad.sin_port)
+              << ") refused to store the file" << std::endl;
+    return;
+  }
+  int fd = initialize_tcp(&server[0], std::to_string(dto.header.param));
+  auto session = std::make_shared<FileSendSession>(file);
+  session->when_success([file, server, ad] {
+    std::cout << "File " << file.string() << " uploaded  (" << server << ":" << ntohs(ad.sin_port) << ")" << std::endl;
+  });
+  session->set_fd(fd);
+  p.subscribe(session);
 }
 
-void CLIListener::do_upload(Poll &poll, std::string &file) {
-  fs::path path(file);
+void CLIListener::do_upload(Poll &poll, std::string &full_path) {
+  fs::path path(full_path);
   if (!fs::exists(path) || !fs::is_regular_file(path)) {
-    std::cout << "File " << file << " does not exist" << std::endl;
+    std::cout << "File " << full_path << " does not exist" << std::endl;
     return;
   }
   std::string server = get_largest_server();
   uint64_t size = fs::file_size(path);
   if (server.empty() || size > server_space[server]) {
-    std::cout << "File " << file << " too big" << std::endl;
+    std::cout << "File " << full_path << " too big" << std::endl;
     return;
   }
   uint16_t prt = this->port;
-//  auto query = std::make_shared<MultiQuery<dto::Complex, dto::Complex>>
-//      (prt, server, 10000);
-//  poll.subscribe(query);
-//  auto dto = dto::create(this->cmd_seq++, "ADD", file, size);
-//  query->execute(
-//      dto, dto::Type::DOWNLOAD_RES, std::bind(&CLIListener::on_upload_result, this, std::ref(poll), _1, _2),
-//      [server, prt, file](auto &pld) -> void {
-//        if (pld.substr(0, 6) == "NO_WAY") {
-//          std::cout << "File " << file << " uploading failed (" << server << ":" << prt
-//                    << ") Illegal file, or no space on the server" << std::endl;
-//        } else {
-//          std::cout << "Unknown packet arrived " << pld << std::endl;
-//        }
-//      }, [] {});
+  auto query = std::make_shared<MultiQuery<dto::Complex, dto::Complex>>
+      (prt, server, 10000);
+  poll.subscribe(query);
+  std::string filename = path.filename().string();
+  auto dto = dto::create(this->cmd_seq++, "ADD", filename, size);
+  query->execute(
+      dto, std::bind(&CLIListener::on_upload_result, this, std::ref(poll), _1, _2, path),
+      [full_path, server, prt] {
+        std::cout << "File " << full_path << " uploading failed (" << server << ":" << prt << ") Error in connection"
+                  << std::endl;
+      }, [] {});
 }
 
 void CLIListener::on_error(Poll &p, int event) {

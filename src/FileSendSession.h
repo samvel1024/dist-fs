@@ -8,12 +8,16 @@
 #include "nio/TCPServer.h"
 #include "nio/SendBuffer.h"
 #include <boost/filesystem.hpp>
+#include <functional>
 
 class FileSendSession : public Subscriber {
+ public:
+ typedef std::function<void(void)> OnSuccess;
 
  private:
   SendBuffer buff;
   boost::filesystem::fstream stream;
+  OnSuccess success{};
  public:
 
   void on_input(Poll &p) override;
@@ -25,6 +29,8 @@ class FileSendSession : public Subscriber {
   explicit FileSendSession(const boost::filesystem::path &file);
 
   static TCPServer::SessionFactory create_session_factory(const boost::filesystem::path &p);
+
+  void when_success(OnSuccess s);
 
 };
 

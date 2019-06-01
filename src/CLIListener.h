@@ -38,10 +38,10 @@ class CLIListener : public Subscriber {
   void do_fetch(Poll &p, std::string &arg);
   void on_search_result(dto::Simple &resp, sockaddr_in addr);
   void on_fetch_result(Poll &p, dto::Complex &resp, sockaddr_in addr, std::string serv, uint16_t port);
-  void do_upload(Poll &poll, std::string &basic_string);
+  void do_upload(Poll &poll, std::string &full_path);
   void on_discover_result(dto::Complex &resp, sockaddr_in addr);
   std::string get_largest_server();
-  void on_upload_result(Poll &p, dto::Complex &dto, sockaddr_in ad);
+  void on_upload_result(Poll &p, dto::Complex &dto, sockaddr_in ad, boost::filesystem::path file);
 };
 
 #endif //DISTFS_CLILISTENER_H

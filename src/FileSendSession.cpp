@@ -1,5 +1,7 @@
 #include <utility>
 
+#include <utility>
+
 //
 // Created by Samvel Abrahamyan on 2019-05-27.
 //
@@ -33,6 +35,7 @@ void FileSendSession::on_output(Poll &p) {
   }
   buff.on_read_bytes(n);
   if (buff.is_all_read() && stream.eof()) {
+    this->success();
     p.unsubscribe(*this);
   }
 }
@@ -52,6 +55,9 @@ TCPServer::SessionFactory FileSendSession::create_session_factory(const fs::path
 
 FileSendSession::~FileSendSession() {
   stream.close();
+}
+void FileSendSession::when_success(FileSendSession::OnSuccess s) {
+  this->success = std::move(s);
 }
 
 

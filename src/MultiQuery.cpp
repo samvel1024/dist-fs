@@ -12,7 +12,7 @@ template<class REQ, class RES>
 MultiQuery<REQ, RES>::MultiQuery(uint16_t port, std::string addr, int tm) :
     Subscriber("MultiQuery"), req(), addr(addr), timeout(tm) {
 
-  struct sockaddr_in remote_address{}, local_address{};
+  struct sockaddr_in remote_address{};
 
   int sock = no_err(socket(AF_INET, SOCK_DGRAM, 0), "Could not open udp socket");
 
@@ -54,7 +54,13 @@ void MultiQuery<REQ, RES>::on_input(Poll &p) {
     throw Error("Invalid read udp packet");
   }
   std::string data = buffer.substr(0, read);
-  auto dto = dto::unmarshall<RES>(data);
+  RES dto;
+  try {
+    dto = dto::unmarshall<RES>(data);
+  } catch (Error &e) {
+    this->error();
+    return;
+  }
   std::cout << "MultiQuery: received " << dto << std::endl;
   if (dto.header.cmd_seq != this->req.header.cmd_seq) {
     this->error();

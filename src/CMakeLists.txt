@@ -38,6 +38,7 @@ add_executable(client
         client.cpp
         CLIListener.cpp CLIListener.h
         MultiQuery.cpp MultiQuery.h
+        FileSendSession.cpp FileSendSession.h
         FileReceiveSession.cpp FileReceiveSession.h)
 target_link_libraries(client Nio ${Boost_LIBRARIES})
 
