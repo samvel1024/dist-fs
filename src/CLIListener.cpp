@@ -57,10 +57,18 @@ void CLIListener::exec_command(Poll &p, std::string &type, std::string &arg) {
       this->do_fetch(p, arg);
       break;
     }
+    case dto::Type::UPLOAD_REQ: {
+      this->do_upload(p, arg);
+      break;
+    }
     default : {
       throw Error("This should not happen");
     }
   }
+}
+
+void print_prompt(){
+  std::cout << "ENTER A COMMAND:" << std::endl;
 }
 
 void CLIListener::block_input(Poll &p) {
@@ -87,9 +95,10 @@ void CLIListener::on_search_result(dto::Simple &resp, sockaddr_in addr) {
   std::vector<std::string> tokens;
   boost::split(tokens, resp.payload, boost::is_any_of("\n"));
   std::string ip = get_ip(addr);
+  //TODO take care of upload File Name.txt
   for (auto &f: tokens) {
     std::cout << f << " (" << ip << ")" << std::endl;
-    this->files[f] = ip;
+    this->file_server[f] = ip;
   }
 }
 
@@ -102,10 +111,11 @@ void CLIListener::do_search(Poll &p, std::string &arg) {
   query->execute(reqdto, std::bind(&CLIListener::on_search_result, this, _1, _2), unblock, unblock);
 }
 
-void on_discover_result(dto::Complex &resp, sockaddr_in addr) {
+void CLIListener::on_discover_result(dto::Complex &resp, sockaddr_in addr) {
   std::string mcast = std::move(resp.payload);
   uint64_t disk = resp.header.param;
   std::cout << "Found " << get_ip(addr) << " (" << mcast << ") with free space " << disk << std::endl;
+  server_space[get_ip(addr)] = resp.header.param;
 }
 
 void CLIListener::do_discover(Poll &p) {
@@ -115,7 +125,7 @@ void CLIListener::do_discover(Poll &p) {
   auto empty = std::string();
   auto dto = dto::create(cmd_seq++, "HELLO", empty);
   auto unblock = std::bind(&CLIListener::unblock_input, this, std::ref(p));
-  query->execute(dto, on_discover_result, unblock, unblock);
+  query->execute(dto, std::bind(&CLIListener::on_discover_result, this, _1, _2), unblock, unblock);
 }
 
 int initialize_tcp(std::string host, std::string port) {
@@ -138,13 +148,12 @@ int initialize_tcp(std::string host, std::string port) {
   return sock;
 }
 
-void CLIListener::on_fetch_result(Poll &p, dto::Complex &resp, sockaddr_in addr) {
+void CLIListener::on_fetch_result(Poll &p, dto::Complex &resp, sockaddr_in addr, std::string serv, uint16_t prt) {
   int tcp_fd = initialize_tcp(get_ip(addr), std::to_string(resp.header.param));
   fs::path path(out_dir);
   path /= fs::path(resp.payload);
-  auto session = std::make_shared<FileReceiveSession>(path, [](fs::path path) {
-    //TODO fix format
-    std::cout << "Saved file in " << path << std::endl;
+  auto session = std::make_shared<FileReceiveSession>(path, [serv, prt](fs::path path) {
+    std::cout << "File " << path.filename().string() << " downloaded (" << serv << ":" << prt << ")" << std::endl;
   });
   int hct = 1;
   no_err(ioctl(tcp_fd, FIONBIO, (char *) &hct), "Setting to non blocking");
@@ -153,17 +162,66 @@ void CLIListener::on_fetch_result(Poll &p, dto::Complex &resp, sockaddr_in addr)
 }
 
 void CLIListener::do_fetch(Poll &p, std::string &arg) {
-  if (files.find(arg) == files.end()) {
+  if (file_server.find(arg) == file_server.end()) {
     //TODO print message;
     return;
   }
-  auto addr = files[arg];
+  if (file_server.find(arg) == file_server.end()) {
+    std::cout << "Not found file " << arg << " in search results" << std::endl;
+    return;
+  }
+  auto addr = file_server[arg];
   auto dto = dto::create(cmd_seq++, "GET", arg);
   auto query = std::make_shared<MultiQuery<dto::Simple, dto::Complex>>(port, addr, 10000);
   p.subscribe(query);
-  query->execute(dto, std::bind(&CLIListener::on_fetch_result, this, std::ref(p), _1, _2),
+  query->execute(dto, std::bind(&CLIListener::on_fetch_result, this, std::ref(p), _1, _2, addr, port),
                  request_failed, [] {});
 
+}
+
+std::string CLIListener::get_largest_server() {
+  uint64_t space = 0;
+  std::string ans;
+  for (const auto &entry: server_space) {
+    if (entry.second > space) {
+      space = entry.second;
+      ans = entry.first;
+    }
+  }
+  return ans;
+}
+
+void CLIListener::on_upload_result(Poll &p, dto::Complex &dto, sockaddr_in ad) {
+  std::cout << "Got " << dto << std::endl;
+}
+
+void CLIListener::do_upload(Poll &poll, std::string &file) {
+  fs::path path(file);
+  if (!fs::exists(path) || !fs::is_regular_file(path)) {
+    std::cout << "File " << file << " does not exist" << std::endl;
+    return;
+  }
+  std::string server = get_largest_server();
+  uint64_t size = fs::file_size(path);
+  if (server.empty() || size > server_space[server]) {
+    std::cout << "File " << file << " too big" << std::endl;
+    return;
+  }
+  uint16_t prt = this->port;
+//  auto query = std::make_shared<MultiQuery<dto::Complex, dto::Complex>>
+//      (prt, server, 10000);
+//  poll.subscribe(query);
+//  auto dto = dto::create(this->cmd_seq++, "ADD", file, size);
+//  query->execute(
+//      dto, dto::Type::DOWNLOAD_RES, std::bind(&CLIListener::on_upload_result, this, std::ref(poll), _1, _2),
+//      [server, prt, file](auto &pld) -> void {
+//        if (pld.substr(0, 6) == "NO_WAY") {
+//          std::cout << "File " << file << " uploading failed (" << server << ":" << prt
+//                    << ") Illegal file, or no space on the server" << std::endl;
+//        } else {
+//          std::cout << "Unknown packet arrived " << pld << std::endl;
+//        }
+//      }, [] {});
 }
 
 void CLIListener::on_error(Poll &p, int event) {

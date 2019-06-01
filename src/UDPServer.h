@@ -20,7 +20,7 @@ class UDPServer : public Subscriber {
   const uint16_t port;
   const std::string mcast_addr;
 
-  void on_dispatch(Poll &p, int bytes_read);
+  void route_request(Poll &p, int bytes_read);
 
   void on_hello(Poll &p, dto::Simple &msg);
 
@@ -28,15 +28,15 @@ class UDPServer : public Subscriber {
 
   void on_input(Poll &p) override;
 
-  void on_output(Poll &p) override;
-
   ~UDPServer() override;
 
   explicit UDPServer(std::string name, std::string addr, uint16_t port, std::shared_ptr<SharedDirectory> shdir,
                      int timeout);
 
   void on_list(Poll &poll, dto::Simple &simple);
-  void on_download(Poll &poll, dto::Simple simple);
+  void on_download(Poll &poll, dto::Simple &simple);
+  void on_upload(Poll &poll, dto::Complex &complex);
+  void on_delete(Poll &poll, dto::Simple &simple);
 };
 
 #endif //DISTFS_UDPSERVER_H

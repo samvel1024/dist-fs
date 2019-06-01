@@ -10,6 +10,7 @@
 #include "nio/Poll.h"
 #include "nio/TCPServer.h"
 #include "FileSendSession.h"
+#include "FileReceiveSession.h"
 
 constexpr int BUFSIZE = 1000;
 namespace fs = boost::filesystem;
@@ -41,10 +42,7 @@ void UDPServer::on_input(Poll &p) {
   clientlen = sizeof(current_client);
   int bytes_read = no_err(recvfrom(fd, &buffer[0], buffer.size(), 0,
                                    (struct sockaddr *) &current_client, &clientlen), "Error in recvfrom");
-  on_dispatch(p, bytes_read);
-//	std::cout << name << "Server received:" << buffer << std::endl;
-//	std::string resp(5000, 'A');
-//	no_err(sendto(fd, &resp[0], resp.size(), 0, (struct sockaddr *) &clientaddr, clientlen), "Error in sendto");
+  route_request(p, bytes_read);
 }
 
 template<typename T>
@@ -62,7 +60,7 @@ void respond(int sock, T dto, sockaddr_in addr) {
   no_err(sendto(sock, &resp_str[0], resp_str.size(), 0, (struct sockaddr *) &addr, len), "Error in sendto");
 }
 
-void UDPServer::on_dispatch(Poll &p, int bytes_read) {
+void UDPServer::route_request(Poll &p, int bytes_read) {
   std::string type_header = buffer.substr(0, dto::CMD_TYPE_LEN);
   std::string data = buffer.substr(0, bytes_read);
   try {
@@ -81,6 +79,15 @@ void UDPServer::on_dispatch(Poll &p, int bytes_read) {
         auto dto = parse<dto::Simple>(data);
         on_download(p, dto);
         break;
+      }
+      case dto::UPLOAD_REQ: {
+        auto dto = parse<dto::Complex>(data);
+        on_upload(p, dto);
+        break;
+      }
+      case dto::DEL_REQ: {
+        auto dto = parse<dto::Simple>(data);
+        on_delete(p, dto);
       }
       default : {
         throw Error("Illegal cmd type");
@@ -113,29 +120,64 @@ void UDPServer::on_list(Poll &poll, dto::Simple &msg) {
   respond(fd, resp, current_client);
 }
 
-void UDPServer::on_download(Poll &poll, dto::Simple simple) {
+void UDPServer::on_download(Poll &poll, dto::Simple &simple) {
   if (!this->dir->can_read_file(simple.payload)) {
-    //TODO print error message
+    std::cout << "The file " << simple.payload << " does not exist" << std::endl;
     return;
   }
   fs::path fp = dir->path_in_dir(simple.payload);
   auto tcp = std::make_shared<TCPServer>(
-      std::string("TCPServer-") + simple.payload,
+      std::string("FileDownloadServer-") + simple.payload,
       FileSendSession::create_session_factory(fp));
   poll.subscribe(tcp);
+  std::weak_ptr<TCPServer> server = tcp;
+  auto alarm = std::make_shared<Alarm>(timeout * 1000, [server, &poll]() -> void {
+    if (!server.expired())
+      poll.unsubscribe(*server.lock());
+  });
   auto resp = dto::create(simple.header.cmd_seq, "CONNECT_ME", simple.payload, (uint64_t) tcp->get_port());
   respond(fd, resp, current_client);
-  std::weak_ptr<TCPServer> wp = tcp;
-  auto alarm = std::make_shared<Alarm>(timeout * 1000, [wp, &poll]() -> void {
-    if (!wp.expired())
-      poll.unsubscribe(*wp.lock());
-  });
-  poll.subscribe_alarm(alarm);
-  std::cout << "UDPServer: created tcp server listening on port " << tcp->get_port() << std::endl;
+  std::cout << "UDPServer: created file download tcp server listening on port " << tcp->get_port() << std::endl;
 }
 
-void UDPServer::on_output(Poll &p) {
+void UDPServer::on_upload(Poll &poll, dto::Complex &complex) {
+  std::string file_name = complex.payload;
+  if (!dir->can_create_file(complex.header.param, file_name)) {
+    auto dto = dto::create(complex.header.cmd_seq, "NO_WAY", file_name);
+    respond(fd, dto, current_client);
+    return;
+  }
+  dir->reserve_file(file_name, complex.header.param);
+  std::shared_ptr<SharedDirectory> sdir = this->dir;
 
+  auto tcp = std::make_shared<TCPServer>(
+      std::string("FileUploadServer-") + file_name,
+      FileReceiveSession::create_session_factory(dir->path_in_dir(file_name), [file_name, sdir](fs::path f) -> void {
+        std::cout << "Saved file in " << f << std::endl;
+        sdir->on_finished_writing(file_name);
+      })
+  );
+  poll.subscribe(tcp);
+  std::weak_ptr<TCPServer> server = tcp;
+  auto alarm = std::make_shared<Alarm>(timeout * 1000, [server, &poll, file_name, sdir]() -> void {
+    if (!server.expired()) {
+      poll.unsubscribe(*server.lock());
+      sdir->cancel_reserved_file(file_name);
+    }
+  });
+  poll.subscribe_alarm(alarm);
+  std::string nil;
+  auto ok = dto::create(complex.header.cmd_seq, "CAN_ADD", nil, tcp->get_port());
+  respond(fd, ok, current_client);
+  std::cout << "UDPServer: created file upload tcp server listening on port " << tcp->get_port() << std::endl;
+}
+
+void UDPServer::on_delete(Poll &poll, dto::Simple &simple) {
+  if (!dir->can_read_file(simple.payload)) {
+    std::cout << "UDPServer: illegal filename" << std::endl;
+    return;
+  }
+  dir->delete_file(simple.payload);
 }
 
 UDPServer::~UDPServer() {

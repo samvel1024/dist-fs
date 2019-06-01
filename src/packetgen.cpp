@@ -6,7 +6,7 @@
 using namespace dto;
 
 /*
- * example usage  printf "LIST\nDownload\n1 4123 1234" | packetgen | nc -u ${IP} 3000
+ * example usage  printf "LIST\nDownload\n1 4123 1234" | packetgen | nc -u ${IP} ${PORT}
  */
 
 int main() {

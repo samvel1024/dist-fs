@@ -50,13 +50,26 @@ struct Complex {
 };
 
 enum Type {
-  TYPE_UNKNOWN = 0,
-  HELLO_REQ = 1, HELLO_RES,
-  LIST_REQ, LIST_RES,
-  DOWNLOAD_REQ, DOWNLOAD_RES,
-  DEL_REQ, DEL_RES,
-  UPLOAD_REQ, UPLOAD_RES,
+  TYPE_UNKNOWN = 1 << 1,
+  HELLO_REQ = 1 << 2,
+  HELLO_RES = 1 << 3,
+  LIST_REQ = 1 << 4,
+  LIST_RES = 1 << 5,
+  DOWNLOAD_REQ = 1 << 6,
+  DOWNLOAD_RES = 1 << 7,
+  DEL_REQ = 1 << 8,
+  UPLOAD_REQ = 1 << 9,
+  UPLOAD_RES_OK = 1 << 10,
+  UPLOAD_RES_ERR = 1 << 11,
 };
+
+inline Type operator|(Type a, Type b) {
+  return static_cast<Type>(static_cast<int>(a) | static_cast<int>(b));
+}
+
+inline Type operator&(Type a, Type b) {
+  return static_cast<Type>(static_cast<int>(a) & static_cast<int>(b));
+}
 
 inline void do_ntoh(ComplexHeader *msg) {
   msg->cmd_seq = ntohll(msg->cmd_seq);
@@ -76,7 +89,6 @@ inline void do_hton(SimpleHeader *msg) {
   msg->cmd_seq = htonll(msg->cmd_seq);
 }
 
-
 inline Type from_header(std::string &header) {
   static std::unordered_map<std::string, Type> map{
       {"HELLO", HELLO_REQ}, //TODO fill the rest
@@ -85,6 +97,10 @@ inline Type from_header(std::string &header) {
       {"MY_LIST", LIST_RES},
       {"GET", DOWNLOAD_REQ},
       {"CONNECT_ME", DOWNLOAD_RES},
+      {"ADD", UPLOAD_REQ},
+      {"CAN_ADD", UPLOAD_RES_OK},
+      {"NO_WAY", UPLOAD_RES_ERR},
+      {"DEL", DEL_REQ}
   };
   std::string norm = std::string(header.c_str()); //get rid of trailing '\0's
   auto it = map.find(norm);
@@ -153,13 +169,15 @@ inline std::string pretty_payload(const std::string &pld) {
 }
 
 inline std::ostream &operator<<(std::ostream &os, const dto::Simple &m) {
-  return os << "Simple{cmd='" <<  std::string(m.header.cmd, dto::CMD_TYPE_LEN) << "', cmd_seq=" << m.header.cmd_seq << ", payload='"
+  return os << "Simple{cmd='" << std::string(m.header.cmd, dto::CMD_TYPE_LEN) << "', cmd_seq=" << m.header.cmd_seq
+            << ", payload='"
             << dto::pretty_payload(m.payload)
             << "'}";
 }
 
 inline std::ostream &operator<<(std::ostream &os, const dto::Complex &m) {
-  return os << "Complex{cmd='" << std::string(m.header.cmd, dto::CMD_TYPE_LEN) << "', cmd_seq=" << m.header.cmd_seq << ", param=" << m.header.param
+  return os << "Complex{cmd='" << std::string(m.header.cmd, dto::CMD_TYPE_LEN) << "', cmd_seq=" << m.header.cmd_seq
+            << ", param=" << m.header.param
             << ", payload='"
             << dto::pretty_payload(m.payload) << "'}";
 }

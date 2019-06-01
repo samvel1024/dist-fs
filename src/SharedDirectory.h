@@ -13,11 +13,11 @@
 class SharedDirectory {
 
  private:
-  std::map<std::string, long> indexed_files;
-  std::map<std::string, long> pending_files;
+  std::map<std::string, uint64_t> indexed_files;
+  std::map<std::string, uint64_t> pending_files;
   boost::filesystem::path shared_dir;
-  const long total_space;
-  long remaining_space{};
+  const uint64_t total_space;
+  uint64_t remaining_space{};
 
  private:
 
@@ -27,15 +27,15 @@ class SharedDirectory {
 
   boost::filesystem::path path_in_dir(std::string p);
 
-  SharedDirectory(const std::string &p, long sp);
+  SharedDirectory(const std::string &p, uint64_t sp);
 
-  std::map<std::string, long> get_files();
+  std::map<std::string, uint64_t> get_files();
 
-  long get_remaining_space() const;
+  uint64_t get_remaining_space() const;
 
-  void reserve_file(const std::string &, long size);
+  void reserve_file(const std::string &, uint64_t size);
 
-  bool can_create_file(long size, const std::string &name);
+  bool can_create_file(uint64_t size, const std::string &name);
 
   void cancel_reserved_file(const std::string &f);
 

@@ -27,13 +27,21 @@ target_link_libraries(Dto Err)
 add_library(Dir SharedDirectory.h SharedDirectory.cpp)
 target_link_libraries(Dir Err)
 
-add_executable(server server.cpp UDPServer.cpp UDPServer.h FileSendSession.cpp FileSendSession.h)
+add_executable(server
+        server.cpp
+        UDPServer.cpp UDPServer.h
+        FileSendSession.cpp FileSendSession.h
+        FileReceiveSession.cpp FileReceiveSession.h)
 target_link_libraries(server Nio Dir ${Boost_LIBRARIES})
 
-add_executable(client client.cpp CLIListener.cpp CLIListener.h MultiQuery.cpp MultiQuery.h FileReceiveSession.cpp FileReceiveSession.h)
+add_executable(client
+        client.cpp
+        CLIListener.cpp CLIListener.h
+        MultiQuery.cpp MultiQuery.h
+        FileReceiveSession.cpp FileReceiveSession.h)
 target_link_libraries(client Nio ${Boost_LIBRARIES})
 
-add_executable(tcpserver tcpserver.cpp FileSendSession.cpp FileSendSession.h)
+add_executable(tcpserver tcpserver.cpp FileSendSession.cpp FileSendSession.h FileReceiveSession.cpp FileReceiveSession.h)
 target_link_libraries(tcpserver Nio ${Boost_LIBRARIES})
 
 add_executable(packetgen packetgen.cpp)

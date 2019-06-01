@@ -4,8 +4,8 @@ namespace fs = boost::filesystem;
 
 FileReceiveSession::FileReceiveSession(const fs::path &file, OnSuccess f) :
     Subscriber("FileReceiveSession"), stream(), file(file), success(std::move(f)) {
-    set_expected(POLLIN);
-    stream.open(file, std::ios::out);
+  set_expected(POLLIN);
+  stream.open(file, std::ios::out);
 }
 
 FileReceiveSession::~FileReceiveSession() {
@@ -25,7 +25,7 @@ void FileReceiveSession::on_input(Poll &p) {
     stream.write(buff, bytes);
     if (!stream) {
       //TODO error msg
-      std::cout << "Could not write to file " << file <<  std::endl;
+      std::cout << "Could not write to file " << file << std::endl;
       p.unsubscribe(*this);
     }
   } else {
@@ -33,4 +33,16 @@ void FileReceiveSession::on_input(Poll &p) {
     success(file);
     p.unsubscribe(*this);
   }
+}
+TCPServer::SessionFactory FileReceiveSession::create_session_factory(
+    boost::filesystem::path target,
+    OnSuccess success) {
+  return [=](Poll &p, TCPServer &server, sockaddr_in ad) -> std::shared_ptr<Subscriber> {
+    p.unsubscribe(server);
+    return std::make_shared<FileReceiveSession>(target, success);
+  };
+}
+void FileReceiveSession::on_error(Poll &p, int e) {
+  Subscriber::on_error(p, e);
+  //TODO add listener and notify
 }
