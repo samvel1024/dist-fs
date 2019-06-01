@@ -8,8 +8,8 @@
 
 #include "FileSendSession.h"
 
-const int SEND_BUF_SIZE = 1000;
-char temp_buff[SEND_BUF_SIZE];
+const int FILE_SEND_BUF_SIZE = 10000;
+char FILE_SEND_BUF[FILE_SEND_BUF_SIZE];
 
 namespace fs = boost::filesystem;
 
@@ -19,8 +19,8 @@ void FileSendSession::on_input(Poll &p) {
 
 void FileSendSession::on_output(Poll &p) {
   if (buff.is_all_read()) {
-    stream.read(temp_buff, SEND_BUF_SIZE);
-    buff.load_bytes(temp_buff, stream.gcount());
+    stream.read(FILE_SEND_BUF, FILE_SEND_BUF_SIZE);
+    buff.load_bytes(FILE_SEND_BUF, stream.gcount());
     if (!stream && !stream.eof()) {
       std::cout << this->name << ": Error in reading from file, disconnecting\n";
       p.unsubscribe(*this);
@@ -42,7 +42,7 @@ void FileSendSession::on_output(Poll &p) {
 
 FileSendSession::FileSendSession(const fs::path &file) :
     Subscriber("FileDownload"),
-    buff(SEND_BUF_SIZE), stream(file) {
+    buff(10000), stream(file) {
   set_expected(POLLOUT);
 }
 

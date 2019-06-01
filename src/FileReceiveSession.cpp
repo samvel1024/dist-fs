@@ -2,6 +2,9 @@
 
 namespace fs = boost::filesystem;
 
+const int FILE_REC_BUF_SIZE = 10000;
+char FILE_REC_BUF[FILE_REC_BUF_SIZE];
+
 FileReceiveSession::FileReceiveSession(const fs::path &file, OnSuccess f) :
     Subscriber("FileReceiveSession"), stream(), file(file), success(std::move(f)) {
   set_expected(POLLIN);
@@ -14,15 +17,14 @@ FileReceiveSession::~FileReceiveSession() {
 }
 
 void FileReceiveSession::on_input(Poll &p) {
-  char buff[4000];
-  int bytes = read(fd, buff, 4000);
+  int bytes = read(fd, FILE_REC_BUF, FILE_REC_BUF_SIZE);
   if (bytes < 0) {
     //TODO print format;
     std::cout << "Error in reading from socket " << std::endl;
     p.unsubscribe(*this);
     return;
   } else if (bytes > 0) {
-    stream.write(buff, bytes);
+    stream.write(FILE_REC_BUF, bytes);
     if (!stream) {
       //TODO error msg
       std::cout << "Could not write to file " << file << std::endl;

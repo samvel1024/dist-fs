@@ -17,18 +17,18 @@
 using namespace std::placeholders;
 namespace fs = boost::filesystem;
 
-
 void print_prompt() {
   std::cout << "ENTER A COMMAND:" << std::endl;
 }
 
-// TODO the input should come from a pipe opened at other thread, or read with one byte buffer
+// Reading in one word buffer since it needs more advanced buffering if the program is used with UNIX pipe
 void CLIListener::on_input(Poll &p) {
-  char buf[10000];
-  int r = read(fd, buf, 10000);
-  buf[r - 1] = '\0'; // The last one should be new line char
-
-  std::string line(buf);
+  std::string line;
+  char ch;
+  int read_sz;
+  while ((read_sz = read(fd, &ch, 1)) == 1 && ch != '\n') {
+    line += ch;
+  }
   std::vector<std::string> tokens;
   boost::split(tokens, line, boost::is_any_of(" "));
   if (tokens.empty() || tokens.size() > 2) {
@@ -38,8 +38,11 @@ void CLIListener::on_input(Poll &p) {
   std::transform(tokens[0].begin(), tokens[0].end(), tokens[0].begin(), ::tolower);
   std::string arg = tokens.size() == 2 ? tokens[1] : std::string();
   exec_command(p, tokens[0], arg);
-  if (this->expected & POLLIN){
+  if (this->expected & POLLIN) {
     print_prompt();
+  }
+  if (read_sz == 0) {//EOF reached
+    p.do_shutdown();
   }
 }
 
@@ -79,8 +82,6 @@ void CLIListener::exec_command(Poll &p, std::string &type, std::string &arg) {
     }
   }
 }
-
-
 
 void CLIListener::block_input(Poll &p) {
   set_expected(0);
