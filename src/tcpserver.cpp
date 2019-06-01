@@ -7,19 +7,30 @@
 
 namespace fs = boost::filesystem;
 
-int main(int ac, char **av) {
+class Stdin : public Subscriber {
+ public:
 
-  if (ac != 2) {
-    std::cerr << "Illegal input";
-    return 1;
+  Stdin() : Subscriber("qa") {}
+  void on_input(Poll &p) override {
+    char ch;
+    std::string line;
+    int sz;
+    while ((sz = read(fd, &ch, 1)) == 1 && ch != '\n') {
+      line += ch;
+    }
+    if (sz == 0) {
+      std::cout << "end" << std::endl;
+      p.unsubscribe(*this);
+    }
+    std::cout << line << std::endl;
   }
+};
 
-  fs::path path((std::string(av[1])));
-  std::cout << path << std::endl;
+int main(int ac, char **av) {
   Poll p;
-  auto tcp = std::make_shared<TCPServer>("TCP", FileReceiveSession::create_session_factory(path, [](fs::path) -> void {
-    std::cout << "OK" << std::endl;
-  }), 3001);
-  p.subscribe(std::move(tcp));
+  auto s = std::make_shared<Stdin>();
+  s->set_fd(STDIN_FILENO);
+  s->set_expected(POLLIN);
+  p.subscribe(s);
   p.loop();
 }

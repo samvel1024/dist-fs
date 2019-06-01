@@ -17,6 +17,11 @@
 using namespace std::placeholders;
 namespace fs = boost::filesystem;
 
+
+void print_prompt() {
+  std::cout << "ENTER A COMMAND:" << std::endl;
+}
+
 // TODO the input should come from a pipe opened at other thread, or read with one byte buffer
 void CLIListener::on_input(Poll &p) {
   char buf[10000];
@@ -33,6 +38,9 @@ void CLIListener::on_input(Poll &p) {
   std::transform(tokens[0].begin(), tokens[0].end(), tokens[0].begin(), ::tolower);
   std::string arg = tokens.size() == 2 ? tokens[1] : std::string();
   exec_command(p, tokens[0], arg);
+  if (this->expected & POLLIN){
+    print_prompt();
+  }
 }
 
 void CLIListener::exec_command(Poll &p, std::string &type, std::string &arg) {
@@ -62,15 +70,17 @@ void CLIListener::exec_command(Poll &p, std::string &type, std::string &arg) {
       this->do_upload(p, arg);
       break;
     }
+    case dto::Type::DEL_REQ: {
+      this->do_delete(p, arg);
+      break;
+    }
     default : {
       throw Error("This should not happen");
     }
   }
 }
 
-void print_prompt() {
-  std::cout << "ENTER A COMMAND:" << std::endl;
-}
+
 
 void CLIListener::block_input(Poll &p) {
   set_expected(0);
@@ -80,6 +90,7 @@ void CLIListener::block_input(Poll &p) {
 void CLIListener::unblock_input(Poll &p) {
   set_expected(POLLIN);
   p.notify_subscriber_changed(*this);
+  print_prompt();
 }
 
 std::string get_ip(sockaddr_in addr) {
@@ -105,11 +116,13 @@ void CLIListener::on_search_result(dto::Simple &resp, sockaddr_in addr) {
 
 void CLIListener::do_search(Poll &p, std::string &arg) {
   block_input(p);
-  auto query = std::make_shared<MultiQuery<dto::Simple, dto::Simple>>(port, mcast_addr, timeout_sec * 1000);
-  p.subscribe(query);
   auto reqdto = dto::create(this->cmd_seq++, "LIST", arg);
+  auto query = std::make_shared<MultiQuery<dto::Simple, dto::Simple>>(reqdto, port, mcast_addr, timeout_sec * 1000);
+  p.subscribe(query);
   auto unblock = std::bind(&CLIListener::unblock_input, this, std::ref(p));
-  query->execute(reqdto, std::bind(&CLIListener::on_search_result, this, _1, _2), unblock, unblock);
+  query->when_response(std::bind(&CLIListener::on_search_result, this, _1, _2));
+  query->when_error(unblock);
+  query->when_timeout(unblock);
 }
 
 void CLIListener::on_discover_result(dto::Complex &resp, sockaddr_in addr) {
@@ -121,12 +134,14 @@ void CLIListener::on_discover_result(dto::Complex &resp, sockaddr_in addr) {
 
 void CLIListener::do_discover(Poll &p) {
   block_input(p);
-  auto query = std::make_shared<MultiQuery<dto::Simple, dto::Complex>>(port, mcast_addr, timeout_sec * 1000);
-  p.subscribe(query);
   auto empty = std::string();
   auto dto = dto::create(cmd_seq++, "HELLO", empty);
+  auto query = std::make_shared<MultiQuery<dto::Simple, dto::Complex>>(dto, port, mcast_addr, timeout_sec * 1000);
+  p.subscribe(query);
   auto unblock = std::bind(&CLIListener::unblock_input, this, std::ref(p));
-  query->execute(dto, std::bind(&CLIListener::on_discover_result, this, _1, _2), unblock, unblock);
+  query->when_response(std::bind(&CLIListener::on_discover_result, this, _1, _2));
+  query->when_error(unblock);
+  query->when_timeout(unblock);
 }
 
 int initialize_tcp(std::string host, std::string port) {
@@ -173,11 +188,10 @@ void CLIListener::do_fetch(Poll &p, std::string &arg) {
   }
   auto addr = file_server[arg];
   auto dto = dto::create(cmd_seq++, "GET", arg);
-  auto query = std::make_shared<MultiQuery<dto::Simple, dto::Complex>>(port, addr, 10000);
+  auto query = std::make_shared<MultiQuery<dto::Simple, dto::Complex>>(dto, port, addr, 10000);
   p.subscribe(query);
-  query->execute(dto, std::bind(&CLIListener::on_fetch_result, this, std::ref(p), _1, _2, addr, port),
-                 request_failed, [] {});
-
+  query->when_response(std::bind(&CLIListener::on_fetch_result, this, std::ref(p), _1, _2, addr, port));
+  query->when_error(request_failed);
 }
 
 std::string CLIListener::get_largest_server() {
@@ -223,17 +237,26 @@ void CLIListener::do_upload(Poll &poll, std::string &full_path) {
     return;
   }
   uint16_t prt = this->port;
-  auto query = std::make_shared<MultiQuery<dto::Complex, dto::Complex>>
-      (prt, server, 10000);
-  poll.subscribe(query);
   std::string filename = path.filename().string();
   auto dto = dto::create(this->cmd_seq++, "ADD", filename, size);
-  query->execute(
-      dto, std::bind(&CLIListener::on_upload_result, this, std::ref(poll), _1, _2, path),
-      [full_path, server, prt] {
-        std::cout << "File " << full_path << " uploading failed (" << server << ":" << prt << ") Error in connection"
-                  << std::endl;
-      }, [] {});
+  auto query = std::make_shared<MultiQuery<dto::Complex, dto::Complex>>
+      (dto, prt, server, 10000);
+  poll.subscribe(query);
+  query->when_response(std::bind(&CLIListener::on_upload_result, this, std::ref(poll), _1, _2, path));
+  query->when_error([full_path, server, prt] {
+    std::cout << "File " << full_path << " uploading failed (" << server << ":" << prt << ") Error in connection"
+              << std::endl;
+  });
+}
+
+void CLIListener::do_delete(Poll &poll, std::string &str) {
+  if (str.empty()) {
+    std::cout << "Cannot be empty" << std::endl;
+    return;
+  }
+  auto dto = dto::create(cmd_seq++, "DEL", str);
+  auto query = std::make_shared<MultiQuery<dto::Simple, dto::Simple>>(dto, port, mcast_addr, 0);
+  poll.subscribe(query);
 }
 
 void CLIListener::on_error(Poll &p, int event) {
@@ -258,6 +281,7 @@ CLIListener::CLIListener(uint16_t port, fs::path out_dir, int timeout_sec, std::
       {"remove", dto::Type::DEL_REQ},
       {"exit", -1} //Hacky way
   };
+  print_prompt();
 }
 
 

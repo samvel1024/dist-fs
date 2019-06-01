@@ -10,25 +10,33 @@
 
 template<class REQ, class RES>
 class MultiQuery : public Subscriber {
+ public:
+  typedef std::function<void(RES &, sockaddr_in)> OnResponse;
+  typedef std::function<void(void)> OnError;
+  typedef std::function<void(void)> OnTimeout;
+ private:
   REQ req;
-  std::function<void(RES &, sockaddr_in)> callback;
-  std::function<void(void)> error;
-  std::function<void(void)> done;
+  OnResponse callback{};
+  OnError error{};
+  OnTimeout done{};
   std::string addr;
   int timeout;
   struct sockaddr_in remote;
  public:
-  MultiQuery(uint16_t port, std::string addr, int timeout);
 
-  void execute(REQ &req_str, std::function<void(RES &, sockaddr_in)> callback,
-               std::function<void(void)> error,
-               std::function<void(void)> done);
+  MultiQuery(REQ &req, uint16_t port, std::string addr, int timeout);
 
   void on_output(Poll &p) override;
 
   void on_input(Poll &p) override;
 
   void on_error(Poll &p, int event) override;
+
+  void when_response(OnResponse resp);
+
+  void when_error(OnError err);
+
+  void when_timeout(OnTimeout t);
 
 };
 

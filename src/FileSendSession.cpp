@@ -35,7 +35,7 @@ void FileSendSession::on_output(Poll &p) {
   }
   buff.on_read_bytes(n);
   if (buff.is_all_read() && stream.eof()) {
-    this->success();
+    if (this->success) this->success();
     p.unsubscribe(*this);
   }
 }

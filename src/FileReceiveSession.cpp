@@ -30,7 +30,8 @@ void FileReceiveSession::on_input(Poll &p) {
     }
   } else {
     stream.close();
-    success(file);
+    if (this->success)
+      success(file);
     p.unsubscribe(*this);
   }
 }

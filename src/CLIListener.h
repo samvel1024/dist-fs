@@ -42,6 +42,7 @@ class CLIListener : public Subscriber {
   void on_discover_result(dto::Complex &resp, sockaddr_in addr);
   std::string get_largest_server();
   void on_upload_result(Poll &p, dto::Complex &dto, sockaddr_in ad, boost::filesystem::path file);
+  void do_delete(Poll &poll, std::string &basic_string);
 };
 
 #endif //DISTFS_CLILISTENER_H

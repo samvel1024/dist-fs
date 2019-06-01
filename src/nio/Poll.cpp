@@ -30,7 +30,7 @@ void Poll::unsubscribe(Subscriber &sub) {
 
 void Poll::loop() {
   uint64_t time = current_time_millis();
-  while (!this->shutdown) {
+  while (!this->shutdown && this->subs.size() > 0) {
     int changed_fds = no_err(poll(&fds[0], fds.size(), WAIT_QUANTUM), "error in poll");
     if (changed_fds == 0 || current_time_millis() - time > WAIT_QUANTUM) { //Timeout occured
       time = current_time_millis();

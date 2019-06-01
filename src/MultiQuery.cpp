@@ -9,8 +9,10 @@
 std::string buffer(100000, '\0');
 
 template<class REQ, class RES>
-MultiQuery<REQ, RES>::MultiQuery(uint16_t port, std::string addr, int tm) :
-    Subscriber("MultiQuery"), req(), addr(addr), timeout(tm) {
+MultiQuery<REQ, RES>::MultiQuery(REQ &req, uint16_t port, std::string addr, int timeout) :
+    Subscriber("MultiQuery"),
+    req(std::move(req)),
+    addr(addr), timeout(timeout) {
 
   struct sockaddr_in remote_address{};
 
@@ -40,9 +42,12 @@ void MultiQuery<REQ, RES>::on_output(Poll &p) {
   p.notify_subscriber_changed(*this);
   if (this->timeout > 0) {
     p.subscribe_alarm(std::make_shared<Alarm>(this->timeout, [&] {
-      this->done();
+      if (this->done)
+        this->done();
       p.unsubscribe(*this);
     }));
+  } else {
+    p.unsubscribe(*this);
   }
 }
 
@@ -58,17 +63,16 @@ void MultiQuery<REQ, RES>::on_input(Poll &p) {
   try {
     dto = dto::unmarshall<RES>(data);
   } catch (Error &e) {
-    this->error();
+    if (this->error)
+      this->error();
     return;
   }
   std::cout << "MultiQuery: received " << dto << std::endl;
   if (dto.header.cmd_seq != this->req.header.cmd_seq) {
-    this->error();
+    //Ignore
   } else {
-    this->callback(dto, remote);
-  }
-  if (this->timeout == 0) {
-    this->done();
+    if (this->callback)
+      this->callback(dto, remote);
   }
 }
 
@@ -78,13 +82,17 @@ void MultiQuery<REQ, RES>::on_error(Poll &p, int event) {
   Subscriber::on_error(p, event);
 }
 
-template<typename REQ, typename RES>
-void MultiQuery<REQ, RES>::execute(REQ &req, std::function<void(RES &, sockaddr_in)> callback,
-                                   std::function<void(void)> error, std::function<void(void)> done) {
-  this->req = std::move(req);
-  this->callback = std::move(callback);
-  this->error = std::move(error);
-  this->done = std::move(done);
+template<class REQ, class RES>
+void MultiQuery<REQ, RES>::when_response(MultiQuery::OnResponse resp) {
+  this->callback = std::move(resp);
+}
+template<class REQ, class RES>
+void MultiQuery<REQ, RES>::when_error(MultiQuery::OnError err) {
+  this->error = std::move(err);
+}
+template<class REQ, class RES>
+void MultiQuery<REQ, RES>::when_timeout(MultiQuery::OnTimeout t) {
+  this->done = std::move(t);
 }
 
 // Nasty hack to avoid writing all in header file

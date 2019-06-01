@@ -88,6 +88,7 @@ void UDPServer::route_request(Poll &p, int bytes_read) {
       case dto::DEL_REQ: {
         auto dto = parse<dto::Simple>(data);
         on_delete(p, dto);
+        break;
       }
       default : {
         throw Error("Illegal cmd type");
@@ -178,6 +179,7 @@ void UDPServer::on_delete(Poll &poll, dto::Simple &simple) {
     return;
   }
   dir->delete_file(simple.payload);
+  std::cout << "UDPServer: deleted file " << simple.payload << std::endl;
 }
 
 UDPServer::~UDPServer() {
