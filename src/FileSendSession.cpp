@@ -4,16 +4,18 @@
 // Created by Samvel Abrahamyan on 2019-05-27.
 //
 
-#include "FileDownloadSession.h"
+#include "FileSendSession.h"
 
 const int SEND_BUF_SIZE = 1000;
 char temp_buff[SEND_BUF_SIZE];
 
-void FileDownloadSession::on_input(Poll &p) {
+namespace fs = boost::filesystem;
+
+void FileSendSession::on_input(Poll &p) {
 
 }
 
-void FileDownloadSession::on_output(Poll &p) {
+void FileSendSession::on_output(Poll &p) {
   if (buff.is_all_read()) {
     stream.read(temp_buff, SEND_BUF_SIZE);
     buff.load_bytes(temp_buff, stream.gcount());
@@ -35,20 +37,20 @@ void FileDownloadSession::on_output(Poll &p) {
   }
 }
 
-FileDownloadSession::FileDownloadSession(const fs::path &file, int timeout) :
-    Subscriber("FileDownload"), timeout(timeout),
+FileSendSession::FileSendSession(const fs::path &file) :
+    Subscriber("FileDownload"),
     buff(SEND_BUF_SIZE), stream(file) {
   set_expected(POLLOUT);
 }
 
-TCPServer::SessionFactory FileDownloadSession::create_session_factory(const fs::path &path, int timeout) {
+TCPServer::SessionFactory FileSendSession::create_session_factory(const fs::path &path) {
   return [=](Poll &p, TCPServer &server, sockaddr_in client) -> std::shared_ptr<Subscriber> {
     p.unsubscribe(server);
-    return std::make_shared<FileDownloadSession>(path, timeout);
+    return std::make_shared<FileSendSession>(path);
   };
 }
 
-FileDownloadSession::~FileDownloadSession() {
+FileSendSession::~FileSendSession() {
   stream.close();
 }
 

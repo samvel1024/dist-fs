@@ -11,6 +11,10 @@
 #include "Dto.h"
 #include <algorithm>
 #include "MultiQuery.h"
+#include "FileReceiveSession.h"
+
+using namespace std::placeholders;
+namespace fs = boost::filesystem;
 
 // TODO the input should come from a pipe opened at other thread, or read with one byte buffer
 void CLIListener::on_input(Poll &p) {
@@ -49,6 +53,10 @@ void CLIListener::exec_command(Poll &p, std::string &type, std::string &arg) {
       this->do_search(p, arg);
       break;
     }
+    case dto::Type::DOWNLOAD_REQ: {
+      this->do_fetch(p, arg);
+      break;
+    }
     default : {
       throw Error("This should not happen");
     }
@@ -71,12 +79,17 @@ std::string get_ip(sockaddr_in addr) {
   return ip;
 }
 
-void on_search_result(dto::Simple &resp, sockaddr_in addr) {
+void request_failed() {
+  std::cout << "Failed UDP request" << std::endl;
+}
+
+void CLIListener::on_search_result(dto::Simple &resp, sockaddr_in addr) {
   std::vector<std::string> tokens;
   boost::split(tokens, resp.payload, boost::is_any_of("\n"));
   std::string ip = get_ip(addr);
   for (auto &f: tokens) {
     std::cout << f << " (" << ip << ")" << std::endl;
+    this->files[f] = ip;
   }
 }
 
@@ -86,7 +99,7 @@ void CLIListener::do_search(Poll &p, std::string &arg) {
   p.subscribe(query);
   auto reqdto = dto::create(this->cmd_seq++, "LIST", arg);
   auto unblock = std::bind(&CLIListener::unblock_input, this, std::ref(p));
-  query->execute(reqdto, on_search_result, unblock, unblock);
+  query->execute(reqdto, std::bind(&CLIListener::on_search_result, this, _1, _2), unblock, unblock);
 }
 
 void on_discover_result(dto::Complex &resp, sockaddr_in addr) {
@@ -103,6 +116,54 @@ void CLIListener::do_discover(Poll &p) {
   auto dto = dto::create(cmd_seq++, "HELLO", empty);
   auto unblock = std::bind(&CLIListener::unblock_input, this, std::ref(p));
   query->execute(dto, on_discover_result, unblock, unblock);
+}
+
+int initialize_tcp(std::string host, std::string port) {
+  struct addrinfo addr_hints;
+  struct addrinfo *addr_result;
+  memset(&addr_hints, 0, sizeof(struct addrinfo));
+  addr_hints.ai_family = AF_INET; // IPv4
+  addr_hints.ai_socktype = SOCK_STREAM;
+  addr_hints.ai_protocol = IPPROTO_TCP;
+  int err = getaddrinfo(&host[0], &port[0], &addr_hints, &addr_result);
+  if (err == EAI_SYSTEM || err != 0) {
+    fprintf(stderr, "getaddrinfo: %s", gai_strerror(err));
+    throw Error("Failed to create tcp client socket");
+  }
+  int sock;
+  no_err(sock = socket(addr_result->ai_family, addr_result->ai_socktype, addr_result->ai_protocol), "tcp socket");
+  no_err(connect(sock, addr_result->ai_addr, addr_result->ai_addrlen), "tcp connect");
+
+  freeaddrinfo(addr_result);
+  return sock;
+}
+
+void CLIListener::on_fetch_result(Poll &p, dto::Complex &resp, sockaddr_in addr) {
+  int tcp_fd = initialize_tcp(get_ip(addr), std::to_string(resp.header.param));
+  fs::path path(out_dir);
+  path /= fs::path(resp.payload);
+  auto session = std::make_shared<FileReceiveSession>(path, [](fs::path path) {
+    //TODO fix format
+    std::cout << "Saved file in " << path << std::endl;
+  });
+  int hct = 1;
+  no_err(ioctl(tcp_fd, FIONBIO, (char *) &hct), "Setting to non blocking");
+  session->set_fd(tcp_fd);
+  p.subscribe(session);
+}
+
+void CLIListener::do_fetch(Poll &p, std::string &arg) {
+  if (files.find(arg) == files.end()) {
+    //TODO print message;
+    return;
+  }
+  auto addr = files[arg];
+  auto dto = dto::create(cmd_seq++, "GET", arg);
+  auto query = std::make_shared<MultiQuery<dto::Simple, dto::Complex>>(port, addr, 10000);
+  p.subscribe(query);
+  query->execute(dto, std::bind(&CLIListener::on_fetch_result, this, std::ref(p), _1, _2),
+                 request_failed, [] {});
+
 }
 
 void CLIListener::on_error(Poll &p, int event) {

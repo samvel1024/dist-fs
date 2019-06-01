@@ -23,9 +23,9 @@ class SharedDirectory {
 
   void index_files();
 
-  boost::filesystem::path path_in_dir(std::string p);
-
  public:
+
+  boost::filesystem::path path_in_dir(std::string p);
 
   SharedDirectory(const std::string &p, long sp);
 

@@ -36,6 +36,7 @@ class UDPServer : public Subscriber {
                      int timeout);
 
   void on_list(Poll &poll, dto::Simple &simple);
+  void on_download(Poll &poll, dto::Simple simple);
 };
 
 #endif //DISTFS_UDPSERVER_H

@@ -76,14 +76,17 @@ inline void do_hton(SimpleHeader *msg) {
   msg->cmd_seq = htonll(msg->cmd_seq);
 }
 
+
 inline Type from_header(std::string &header) {
   static std::unordered_map<std::string, Type> map{
       {"HELLO", HELLO_REQ}, //TODO fill the rest
       {"GOOD_DAY", HELLO_RES},
       {"LIST", LIST_REQ},
-      {"MY_LIST", LIST_RES}
+      {"MY_LIST", LIST_RES},
+      {"GET", DOWNLOAD_REQ},
+      {"CONNECT_ME", DOWNLOAD_RES},
   };
-  std::string norm = std::string(header.c_str());
+  std::string norm = std::string(header.c_str()); //get rid of trailing '\0's
   auto it = map.find(norm);
   if (it == map.end()) {
     return TYPE_UNKNOWN;
@@ -150,13 +153,13 @@ inline std::string pretty_payload(const std::string &pld) {
 }
 
 inline std::ostream &operator<<(std::ostream &os, const dto::Simple &m) {
-  return os << "Simple{cmd='" << m.header.cmd << "', cmd_seq=" << m.header.cmd_seq << ", payload='"
+  return os << "Simple{cmd='" <<  std::string(m.header.cmd, dto::CMD_TYPE_LEN) << "', cmd_seq=" << m.header.cmd_seq << ", payload='"
             << dto::pretty_payload(m.payload)
             << "'}";
 }
 
 inline std::ostream &operator<<(std::ostream &os, const dto::Complex &m) {
-  return os << "Complex{cmd='" << m.header.cmd << "', cmd_seq=" << m.header.cmd_seq << ", param=" << m.header.param
+  return os << "Complex{cmd='" << std::string(m.header.cmd, dto::CMD_TYPE_LEN) << "', cmd_seq=" << m.header.cmd_seq << ", param=" << m.header.param
             << ", payload='"
             << dto::pretty_payload(m.payload) << "'}";
 }

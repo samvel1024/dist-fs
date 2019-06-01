@@ -2,6 +2,7 @@
 
 #include <boost/test/unit_test.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 #include "../src/SharedDirectory.h"
 #include "../src/nio/Error.h"
@@ -127,11 +128,3 @@ BOOST_AUTO_TEST_CASE(SendBuff) {
   BOOST_ASSERT(buf.is_all_read());
 }
 
-BOOST_AUTO_TEST_CASE(OpenFile) {
-  fstream file(path("/Users/sme/bike.jpg"));
-  char buf[1000];
-  file.read(buf, 100);
-  if (!file) {
-    BOOST_ASSERT(false);
-  }
-}

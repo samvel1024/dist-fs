@@ -17,7 +17,6 @@ uint64_t Alarm::get_timeout_time() {
 }
 
 void Alarm::on_timeout() const {
-  std::cout << "Alarm: expired" << std::endl;
   callback();
 }
 

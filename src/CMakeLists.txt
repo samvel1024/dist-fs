@@ -18,8 +18,7 @@ add_library(Nio
         nio/Poll.cpp nio/Poll.h
         nio/TCPServer.cpp nio/TCPServer.h
         nio/Subscriber.cpp nio/Subscriber.h
-        nio/KillReceiver.cpp nio/KillReceiver.h
-        nio/TCPSessionFactory.h)
+        nio/KillReceiver.cpp nio/KillReceiver.h)
 target_link_libraries(Nio Err)
 
 add_library(Dto Dto.h Dto.cpp)
@@ -28,13 +27,13 @@ target_link_libraries(Dto Err)
 add_library(Dir SharedDirectory.h SharedDirectory.cpp)
 target_link_libraries(Dir Err)
 
-add_executable(server server.cpp UDPServer.cpp UDPServer.h)
+add_executable(server server.cpp UDPServer.cpp UDPServer.h FileSendSession.cpp FileSendSession.h)
 target_link_libraries(server Nio Dir ${Boost_LIBRARIES})
 
-add_executable(client client.cpp CLIListener.cpp CLIListener.h MultiQuery.cpp MultiQuery.h)
+add_executable(client client.cpp CLIListener.cpp CLIListener.h MultiQuery.cpp MultiQuery.h FileReceiveSession.cpp FileReceiveSession.h)
 target_link_libraries(client Nio ${Boost_LIBRARIES})
 
-add_executable(tcpserver tcpserver.cpp FileDownloadSession.cpp FileDownloadSession.h)
+add_executable(tcpserver tcpserver.cpp FileSendSession.cpp FileSendSession.h)
 target_link_libraries(tcpserver Nio ${Boost_LIBRARIES})
 
 add_executable(packetgen packetgen.cpp)

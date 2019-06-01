@@ -47,6 +47,16 @@ TCPServer::TCPServer(std::string nm, TCPServer::SessionFactory factory, int port
   set_expected(POLLIN);
   socklen_t len = sizeof(server_address);
   no_err(getsockname(sock, (struct sockaddr *) &server_address, &len), "getsockname");
-  std::cout << this->name << ": listening on port " << ntohs(server_address.sin_port) << std::endl;
+  this->port = ntohs(server_address.sin_port);
+}
+
+int TCPServer::get_port() {
+  return this->port;
+}
+
+TCPServer::~TCPServer() {
+
+  std::cout << "Closed TCP server on port: " << get_port() << std::endl;
+
 }
 

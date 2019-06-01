@@ -35,6 +35,7 @@ void MultiQuery<REQ, RES>::on_output(Poll &p) {
   if (sendto(fd, &data[0], data.size(), 0, (struct sockaddr *) &remote, sizeof(remote)) != data.size()) {
     throw Error("Could not write");
   }
+  std::cout << "MultiQuery: sent " << this->req << std::endl;
   set_expected(POLLIN);
   p.notify_subscriber_changed(*this);
   if (this->timeout > 0) {
@@ -54,6 +55,7 @@ void MultiQuery<REQ, RES>::on_input(Poll &p) {
   }
   std::string data = buffer.substr(0, read);
   auto dto = dto::unmarshall<RES>(data);
+  std::cout << "MultiQuery: received " << dto << std::endl;
   if (dto.header.cmd_seq != this->req.header.cmd_seq) {
     this->error();
   } else {

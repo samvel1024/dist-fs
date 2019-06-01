@@ -1,8 +1,10 @@
 
 #include "nio/Poll.h"
 #include "nio/TCPServer.h"
-#include "FileDownloadSession.h"
+#include "FileSendSession.h"
 #include <iostream>
+
+namespace fs = boost::filesystem;
 
 int main(int ac, char **av) {
 
@@ -14,7 +16,7 @@ int main(int ac, char **av) {
   fs::path path((std::string(av[1])));
   std::cout << path << std::endl;
   Poll p;
-  auto tcp = std::make_shared<TCPServer>("TCP", FileDownloadSession::create_session_factory(path, 4), 3001);
+  auto tcp = std::make_shared<TCPServer>("TCP", FileSendSession::create_session_factory(path), 3001);
   p.subscribe(std::move(tcp));
   p.loop();
 }
