@@ -13,7 +13,7 @@
 #include "FileReceiveSession.h"
 
 namespace fs = boost::filesystem;
-constexpr int MAX_PAYLOAD_SIZE = 500;
+constexpr int MAX_PAYLOAD_SIZE = 400;
 
 int connect_group(in_port_t port, const char *addr) {
   int sock = no_err(socket(AF_INET, SOCK_DGRAM, 0), "socket");

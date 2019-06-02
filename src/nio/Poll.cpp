@@ -20,7 +20,7 @@ void Poll::unsubscribe(Subscriber &sub) {
   int fd = sub.get_fd();
   auto it = subs.find(fd);
   if (it == this->subs.end()) {
-    throw Error("Subscriber already unsubscribed");
+    return;
   }
   this->subs.erase(it);
   for (auto &i: this->fds) { //TODO remove not needed fds
@@ -71,8 +71,8 @@ void Poll::loop() {
         if (fd.revents & POLLOUT) {
           listener->on_output(*this);
         }
-        if (fd.revents & !(POLLIN | POLLOUT)) {
-          std::cout << (fd.revents ^ (POLLIN | POLLOUT)) << " " << fd.revents << std::endl;
+        if (fd.revents & ~(POLLIN | POLLOUT)) {
+          std::cout << "Error event from poll " << fd.revents << std::endl;
           listener->on_error(*this, fd.revents);
         }
       } catch (Error &e) {

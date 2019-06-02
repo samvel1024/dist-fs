@@ -15,6 +15,7 @@ void TCPServer::on_input(Poll &p) {
     connected_fd = accept(this->get_fd(), (struct sockaddr *) &client, &client_len);
     if (connected_fd > 0) {
       std::shared_ptr<Subscriber> session = client_factory(p, *this, client);
+      std::cout << "Started new tcp session " << session->get_name() << std::endl;
       session->set_fd(connected_fd);
       p.subscribe(session);
       std::cout << this->name << ": new connection" << std::endl;

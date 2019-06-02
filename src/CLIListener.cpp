@@ -191,6 +191,7 @@ void CLIListener::on_fetch_result(Poll &p, dto::Complex &resp, sockaddr_in addr,
   no_err(ioctl(tcp_fd, FIONBIO, (char *) &hct), "Setting to non blocking");
   session->set_fd(tcp_fd);
   p.subscribe(session);
+  std::cout << "Started downloading the file to " << path << std::endl;
 }
 
 void CLIListener::do_fetch(Poll &p, std::string &arg) {
@@ -241,6 +242,8 @@ void CLIListener::on_upload_result(Poll &p, dto::Complex &dto, sockaddr_in ad, b
   });
   session->set_fd(fd);
   p.subscribe(session);
+  std::cout << "Started upload the file " << file << std::endl;
+
 }
 
 void CLIListener::do_upload(Poll &poll, std::string &full_path) {
