@@ -222,7 +222,6 @@ UDPServer::UDPServer(const std::string name, std::string addr, uint16_t port, st
       buffer(buf_len, '\0'),
       dir(std::move(shdir)),
       timeout(timeout),
-      port(port),
       mcast_addr(addr) {
   set_fd(connect_group(port, addr.c_str()));
   set_expected(POLLIN);

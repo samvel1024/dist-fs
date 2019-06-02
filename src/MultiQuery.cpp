@@ -61,7 +61,7 @@ void MultiQuery<REQ, RES>::on_input(Poll &p) {
   std::string data = buffer.substr(0, read);
   RES dto;
   try {
-    dto = dto::unmarshall<RES>(data);
+    dto = dto::unmarshall_facade<RES>(data);
   } catch (Error &e) {
     if (this->error)
       this->error();

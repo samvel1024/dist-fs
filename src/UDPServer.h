@@ -19,7 +19,6 @@ class UDPServer : public Subscriber {
   std::string buffer;
   std::shared_ptr<SharedDirectory> dir;
   const int timeout;
-  const uint16_t port;
   const std::string mcast_addr;
   std::queue<Msg> msg_queue;
 

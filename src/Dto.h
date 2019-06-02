@@ -156,6 +156,19 @@ inline T unmarshall(std::string &packet) {
 }
 
 template<typename T>
+inline T unmarshall_facade(std::string &packet){
+  T dto;
+  //Hacky way to have same type response for ADD
+  if (packet.substr(0, 6) == "NO_WAY"){
+    auto simple = unmarshall<dto::Simple>(packet);
+    memcpy(dto.header.cmd, simple.header.cmd, CMD_TYPE_LEN);
+    dto.header.cmd_seq = simple.header.cmd_seq;
+    return dto;
+  }
+  return unmarshall<T>(packet);
+}
+
+template<typename T>
 inline bool equals(T &l, T &r) {
   int mcp = memcmp(&l.header, &r.header, sizeof(decltype(l.header)));
   return mcp == 0 && l.payload == r.payload;

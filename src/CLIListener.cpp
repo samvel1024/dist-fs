@@ -2,6 +2,8 @@
 
 #include <utility>
 
+#include <utility>
+
 //
 // Created by Samvel Abrahamyan on 2019-05-30.
 //
@@ -16,6 +18,7 @@
 
 using namespace std::placeholders;
 namespace fs = boost::filesystem;
+typedef std::vector<std::pair<uint64_t, std::string>> ServerList;
 
 constexpr int LONG_TIMEOUT_MILLIS = 20000;
 
@@ -232,23 +235,22 @@ void CLIListener::do_fetch(Poll &p, std::string &arg) {
   query->when_error(request_failed);
 }
 
-std::string CLIListener::get_largest_server() {
-  uint64_t space = 0;
-  std::string ans;
-  for (const auto &entry: server_space) {
-    if (entry.second > space) {
-      space = entry.second;
-      ans = entry.first;
-    }
-  }
-  return ans;
-}
-
-void CLIListener::on_upload_result(Poll &p, dto::Complex &dto, sockaddr_in ad, boost::filesystem::path file) {
+void CLIListener::on_upload_result(
+    Poll &p,
+    dto::Complex &dto,
+    sockaddr_in ad,
+    boost::filesystem::path file,
+    ServerList servs,
+    int last_tried) {
   std::string hdr = dto.header.cmd;
   auto t = dto::from_header(hdr);
-  if (t == dto::Type::UPLOAD_RES_ERR){
-    std::cout << "NO_WAY response from server" << std::endl;
+  if (t == dto::Type::UPLOAD_RES_ERR) {
+    std::cout << "NO_WAY response from server trying next" << std::endl;
+    if (last_tried > 0)
+      do_upload_query(p, file, std::move(servs), last_tried - 1);
+    else {
+      std::cout << "File " << file.filename().string() << " too big" << std::endl;
+    }
     return;
   }
   auto server = get_ip(ad);
@@ -273,29 +275,40 @@ void CLIListener::on_upload_result(Poll &p, dto::Complex &dto, sockaddr_in ad, b
 
 }
 
+void CLIListener::do_upload_query(Poll &poll, boost::filesystem::path file, ServerList servers, int curr_server) {
+  std::string server = servers[curr_server].second;
+  uint64_t size = fs::file_size(file);
+  uint16_t prt = this->port;
+  std::string filename = file.filename().string();
+  auto dto = dto::create(this->cmd_seq++, "ADD", filename, size);
+  auto query = std::make_shared<MultiQuery<dto::Complex, dto::Complex>>
+      (dto, prt, servers[curr_server].second, LONG_TIMEOUT_MILLIS);
+  poll.subscribe(query);
+  query->when_response(
+      std::bind(&CLIListener::on_upload_result, this, std::ref(poll), _1, _2, file, servers, curr_server));
+  query->when_error([file, server, prt] {
+    std::cout << "File " << file << " uploading failed (" << server << ":" << prt << ") Error from server"
+              << std::endl;
+  });
+}
+
 void CLIListener::do_upload(Poll &poll, std::string &full_path) {
   fs::path path(full_path);
   if (!fs::exists(path) || !fs::is_regular_file(path)) {
     std::cout << "File " << full_path << " does not exist" << std::endl;
     return;
   }
-  std::string server = get_largest_server();
-  uint64_t size = fs::file_size(path);
-  if (server.empty() || size > server_space[server]) {
-    std::cout << "File " << full_path << " too big" << std::endl;
+
+  if (server_space.empty()) {
+    std::cout << "No server info, call discover first" << std::endl;
     return;
   }
-  uint16_t prt = this->port;
-  std::string filename = path.filename().string();
-  auto dto = dto::create(this->cmd_seq++, "ADD", filename, size);
-  auto query = std::make_shared<MultiQuery<dto::Complex, dto::Complex>>
-      (dto, prt, server, LONG_TIMEOUT_MILLIS);
-  poll.subscribe(query);
-  query->when_response(std::bind(&CLIListener::on_upload_result, this, std::ref(poll), _1, _2, path));
-  query->when_error([full_path, server, prt] {
-    std::cout << "File " << full_path << " uploading failed (" << server << ":" << prt << ") Error from server"
-              << std::endl;
-  });
+  ServerList servers;
+  for (auto s: server_space) {
+    servers.emplace_back(s.second, s.first);
+  }
+  std::sort(servers.begin(), servers.end());
+  this->do_upload_query(poll, path, servers, servers.size() - 1);
 }
 
 void CLIListener::do_delete(Poll &poll, std::string &str) {
