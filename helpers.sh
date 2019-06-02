@@ -48,6 +48,8 @@ function kill_clients(){
 }
 
 function stress_upload(){
+    cd ~/test/
+    rm -rf client_*
     CLIENTS=$1
     IP=$2
     PORT=$3

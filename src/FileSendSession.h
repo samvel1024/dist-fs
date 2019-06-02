@@ -12,12 +12,15 @@
 
 class FileSendSession : public Subscriber {
  public:
- typedef std::function<void(void)> OnSuccess;
+ typedef std::function<void(boost::filesystem::path)> OnSuccess;
+ typedef std::function<void(boost::filesystem::path)> OnError;
 
  private:
   SendBuffer buff;
   boost::filesystem::fstream stream;
   OnSuccess success{};
+  OnError error{};
+  boost::filesystem::path file;
  public:
 
   void on_input(Poll &p) override;
@@ -32,6 +35,8 @@ class FileSendSession : public Subscriber {
 
   void when_success(OnSuccess s);
 
+  void when_error(OnError er);
+  void on_error(Poll &p, int event) override;
 };
 
 #endif //DISTFS_FILEDOWNLOADSESSION_H

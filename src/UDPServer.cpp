@@ -183,10 +183,7 @@ void UDPServer::on_upload(Poll &poll, dto::Complex &complex) {
 
   auto tcp = std::make_shared<TCPServer>(
       std::string("FileUploadServer-") + file_name,
-      FileReceiveSession::create_session_factory(dir->path_in_dir(file_name), [file_name, sdir](fs::path f) -> void {
-        std::cout << "Saved file in " << f << std::endl;
-        sdir->on_finished_writing(file_name);
-      })
+      FileReceiveSession::create_session_factory(dir->path_in_dir(file_name))
   );
   poll.subscribe(tcp);
   std::weak_ptr<TCPServer> server = tcp;
@@ -213,7 +210,11 @@ void UDPServer::on_delete(Poll &poll, dto::Simple &simple) {
 }
 
 UDPServer::~UDPServer() {
-  //TODO unsubscribe multicast group
+  struct ip_mreq ip_mreq;
+  ip_mreq.imr_interface.s_addr = htonl(INADDR_ANY);
+  if (setsockopt(fd, IPPROTO_IP, IP_DROP_MEMBERSHIP, (void *) &ip_mreq, sizeof ip_mreq) < 0) {
+    std::cout << "Could not unsubcribe from multicast group" << std::endl;
+  }
 }
 UDPServer::UDPServer(const std::string name, std::string addr, uint16_t port, std::shared_ptr<SharedDirectory> shdir,
                      int timeout)

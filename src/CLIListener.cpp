@@ -179,8 +179,13 @@ void CLIListener::on_fetch_result(Poll &p, dto::Complex &resp, sockaddr_in addr,
   }
   fs::path path(out_dir);
   path /= fs::path(resp.payload);
-  auto session = std::make_shared<FileReceiveSession>(path, [serv, prt](fs::path path) {
+  auto session = std::make_shared<FileReceiveSession>(path);
+  session->when_sucess([serv, prt](fs::path path) {
     std::cout << "File " << path.filename().string() << " downloaded (" << serv << ":" << prt << ")" << std::endl;
+  });
+  session->when_error([serv, prt](fs::path path) {
+    std::cout << "File " << path.filename().string() << " downloading failed (" << serv << ":" << prt
+              << ") Bad things happen" << std::endl;
   });
   int hct = 1;
   no_err(ioctl(tcp_fd, FIONBIO, (char *) &hct), "Setting to non blocking");
@@ -227,8 +232,12 @@ void CLIListener::on_upload_result(Poll &p, dto::Complex &dto, sockaddr_in ad, b
     return;
   }
   auto session = std::make_shared<FileSendSession>(file);
-  session->when_success([file, server, ad] {
+  session->when_success([file, server, ad](auto a) {
     std::cout << "File " << file.string() << " uploaded  (" << server << ":" << ntohs(ad.sin_port) << ")" << std::endl;
+  });
+  session->when_error([file, server, ad](auto a) {
+    std::cout << "File " << file.string() << " uploading failed  (" << server << ":" << ntohs(ad.sin_port)
+              << ") Contact your ISP" << std::endl;
   });
   session->set_fd(fd);
   p.subscribe(session);

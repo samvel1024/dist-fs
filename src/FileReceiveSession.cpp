@@ -1,3 +1,5 @@
+#include <utility>
+
 #include "FileReceiveSession.h"
 
 namespace fs = boost::filesystem;
@@ -5,8 +7,8 @@ namespace fs = boost::filesystem;
 const int FILE_REC_BUF_SIZE = 10000;
 char FILE_REC_BUF[FILE_REC_BUF_SIZE];
 
-FileReceiveSession::FileReceiveSession(const fs::path &file, OnSuccess f) :
-    Subscriber("FileReceiveSession"), stream(), file(file), success(std::move(f)) {
+FileReceiveSession::FileReceiveSession(const fs::path &file) :
+    Subscriber("FileReceiveSession"), stream(), file(file) {
   set_expected(POLLIN);
   stream.open(file, std::ios::out);
 }
@@ -19,14 +21,16 @@ FileReceiveSession::~FileReceiveSession() {
 void FileReceiveSession::on_input(Poll &p) {
   int bytes = read(fd, FILE_REC_BUF, FILE_REC_BUF_SIZE);
   if (bytes < 0) {
-    //TODO print format;
+    if (this->fail)
+      this->fail(file);
     std::cout << "Error in reading from socket " << std::endl;
     p.unsubscribe(*this);
     return;
   } else if (bytes > 0) {
     stream.write(FILE_REC_BUF, bytes);
     if (!stream) {
-      //TODO error msg
+      if (this->fail)
+        this->fail(file);
       std::cout << "Could not write to file " << file << std::endl;
       p.unsubscribe(*this);
     }
@@ -37,15 +41,23 @@ void FileReceiveSession::on_input(Poll &p) {
     p.unsubscribe(*this);
   }
 }
-TCPServer::SessionFactory FileReceiveSession::create_session_factory(
-    boost::filesystem::path target,
-    OnSuccess success) {
+TCPServer::SessionFactory FileReceiveSession::create_session_factory(boost::filesystem::path target) {
   return [=](Poll &p, TCPServer &server, sockaddr_in ad) -> std::shared_ptr<Subscriber> {
     p.unsubscribe(server);
-    return std::make_shared<FileReceiveSession>(target, success);
+    auto s = std::make_shared<FileReceiveSession>(target);
+    s->when_error([](auto p) { std::cout << "Error in receiving file " << p << std::endl; });
+    s->when_sucess([](auto p) { std::cout << "Received file " << p << std::endl; });
+    return s;
   };
 }
 void FileReceiveSession::on_error(Poll &p, int e) {
+  if (this->fail)
+    this->fail(file);
   Subscriber::on_error(p, e);
-  //TODO add listener and notify
+}
+void FileReceiveSession::when_error(FileReceiveSession::OnFail f) {
+  this->fail = std::move(f);
+}
+void FileReceiveSession::when_sucess(FileReceiveSession::OnSuccess s) {
+  this->success = std::move(s);
 }
