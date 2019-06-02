@@ -12,13 +12,18 @@ C1_CL=(
     -p 3000
     -t 1
 )
+C2_CL=(
+    -g 159.65.124.229
+    -p 3000
+    -t 3
+)
 C1=(
     -g 239.13.41.15
     -p 3000
     -t 3
 )
 C2=(
-    -g "${MINIX_IP}"
+    -g 159.65.124.229
     -p 3000
     -t 3
 )
@@ -65,3 +70,18 @@ function stress_upload(){
     rm -rf "_upload"
 }
 
+function generate_shared_dir() {
+    DIR=$1
+    COUNT=$2
+    cd ${DIR}
+    rm -rf *
+    for i in $(seq 1 ${COUNT}); do
+        FILE=$(printf "import uuid\nprint(uuid.uuid4())\n" | python)
+        echo "0123456789" > ${FILE}
+    done;
+}
+
+
+function start_test_server(){
+    generate_shared_dir ~/test/serverdir 10 && sikbuild && server "${C1[@]}" -f ~/test/serverdir -b ${SPACE}
+}

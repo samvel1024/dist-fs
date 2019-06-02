@@ -55,6 +55,7 @@ void SharedDirectory::reserve_file(const std::string &name, uint64_t size) {
 bool SharedDirectory::can_create_file(uint64_t size, const std::string &name) {
   return size <= this->remaining_space && size > 0
       && portable_name(name)
+      && !exists(path_in_dir(name))
       && (indexed_files.find(name) == indexed_files.end())
       && (pending_files.find(name) == pending_files.end());
 }
@@ -128,18 +129,15 @@ void SharedDirectory::delete_file(const std::string &name) {
   remove(p);
 }
 
-std::string SharedDirectory::search_file(const std::string &query) {
-  std::string ans;
+std::vector<std::string> SharedDirectory::search_file(const std::string &query) {
+  std::vector<std::string> ans;
   for (auto &it:indexed_files) {
     if (query.empty() || (it.first.find(query) != std::string::npos && it.second > 0)) {
-      if (!ans.empty())
-        ans += '\n';
-      ans += it.first;
+      ans.push_back(it.first);
     }
   }
   return ans;
 }
-
 
 
 

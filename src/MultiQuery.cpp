@@ -69,7 +69,9 @@ void MultiQuery<REQ, RES>::on_input(Poll &p) {
   }
   std::cout << "MultiQuery: received " << dto << std::endl;
   if (dto.header.cmd_seq != this->req.header.cmd_seq) {
-    //Ignore
+    char *s = inet_ntoa(remote.sin_addr);
+    uint16_t port = ntohs(remote.sin_port);
+    std::cout << "[PCKG ERROR] Skipping invalid package from " << s << ":" << port << ". " << std::endl;
   } else {
     if (this->callback)
       this->callback(dto, remote);

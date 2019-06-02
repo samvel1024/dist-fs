@@ -17,6 +17,8 @@
 using namespace std::placeholders;
 namespace fs = boost::filesystem;
 
+constexpr int LONG_TIMEOUT_MILLIS = 20000;
+
 void print_prompt() {
   std::cout << "ENTER A COMMAND:" << std::endl;
 }
@@ -99,7 +101,7 @@ void CLIListener::unblock_input(Poll &p) {
 std::string get_ip(sockaddr_in addr) {
   std::string ip(INET_ADDRSTRLEN, '\0');
   inet_ntop(AF_INET, &(addr.sin_addr), &ip[0], INET_ADDRSTRLEN);
-  return ip;
+  return std::string(ip.c_str());
 }
 
 void request_failed() {
@@ -197,7 +199,7 @@ void CLIListener::do_fetch(Poll &p, std::string &arg) {
   }
   auto addr = file_server[arg];
   auto dto = dto::create(cmd_seq++, "GET", arg);
-  auto query = std::make_shared<MultiQuery<dto::Simple, dto::Complex>>(dto, port, addr, 10000);
+  auto query = std::make_shared<MultiQuery<dto::Simple, dto::Complex>>(dto, port, addr, LONG_TIMEOUT_MILLIS);
   p.subscribe(query);
   query->when_response(std::bind(&CLIListener::on_fetch_result, this, std::ref(p), _1, _2, addr, port));
   query->when_error(request_failed);
@@ -216,14 +218,7 @@ std::string CLIListener::get_largest_server() {
 }
 
 void CLIListener::on_upload_result(Poll &p, dto::Complex &dto, sockaddr_in ad, boost::filesystem::path file) {
-  std::string hdr = dto.header.cmd;
   auto server = get_ip(ad);
-  dto::Type t = dto::from_header(hdr);
-  if (t != dto::Type::UPLOAD_RES_OK) { // Dirty way to avoid having custom deserialization in MultiQuery
-    std::cout << "File " << file.string() << " uploading failed (" << server << ":" << ntohs(ad.sin_port)
-              << ") refused to store the file" << std::endl;
-    return;
-  }
   int fd;
   try {
     fd = initialize_tcp(&server[0], std::to_string(dto.header.param));
@@ -255,11 +250,11 @@ void CLIListener::do_upload(Poll &poll, std::string &full_path) {
   std::string filename = path.filename().string();
   auto dto = dto::create(this->cmd_seq++, "ADD", filename, size);
   auto query = std::make_shared<MultiQuery<dto::Complex, dto::Complex>>
-      (dto, prt, server, 10000);
+      (dto, prt, server, LONG_TIMEOUT_MILLIS);
   poll.subscribe(query);
   query->when_response(std::bind(&CLIListener::on_upload_result, this, std::ref(poll), _1, _2, path));
   query->when_error([full_path, server, prt] {
-    std::cout << "File " << full_path << " uploading failed (" << server << ":" << prt << ") Error in connection"
+    std::cout << "File " << full_path << " uploading failed (" << server << ":" << prt << ") Error from server"
               << std::endl;
   });
 }

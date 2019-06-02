@@ -128,3 +128,8 @@ BOOST_AUTO_TEST_CASE(SendBuff) {
   BOOST_ASSERT(buf.is_all_read());
 }
 
+
+BOOST_AUTO_TEST_CASE(TC){
+  path path1("~/file");
+  BOOST_ASSERT(exists(path1));
+}

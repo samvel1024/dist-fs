@@ -49,7 +49,7 @@ class SharedDirectory {
 
   void delete_file(const std::string &name);
 
-  std::string search_file(const std::string &query);
+  std::vector<std::string> search_file(const std::string &query);
 };
 
 #endif //DISTFS_SHAREDDIRECTORY_H

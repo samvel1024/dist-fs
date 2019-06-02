@@ -13,6 +13,7 @@
 #include "FileReceiveSession.h"
 
 namespace fs = boost::filesystem;
+constexpr int MAX_PAYLOAD_SIZE = 500;
 
 int connect_group(in_port_t port, const char *addr) {
   int sock = no_err(socket(AF_INET, SOCK_DGRAM, 0), "socket");
@@ -128,13 +129,26 @@ void UDPServer::on_hello(Poll &p, dto::Simple &msg) {
 
 void UDPServer::on_list(Poll &poll, dto::Simple &msg) {
   std::string query = std::move(msg.payload);
-  std::string resp_payload = dir->search_file(query);
-  if (resp_payload.empty()) {
+  auto file_list = dir->search_file(query);
+  if (file_list.empty()) {
     return;
   }
-  auto resp = dto::create(msg.header.cmd_seq, "MY_LIST", resp_payload);
-  //TODO need to split into packets
-  respond(poll, resp);
+  std::string payload;
+  for (auto &file: file_list) {
+    if (file.size() + payload.size() >= MAX_PAYLOAD_SIZE) {
+      auto resp = dto::create(msg.header.cmd_seq, "MY_LIST", payload);
+      payload.clear();
+      respond(poll, resp);
+    }
+    if (!payload.empty()) {
+      payload += '\n';
+    }
+    payload += file;
+  }
+  if (!payload.empty()) {
+    auto resp = dto::create(msg.header.cmd_seq, "MY_LIST", payload);
+    respond(poll, resp);
+  }
 }
 
 void UDPServer::on_download(Poll &poll, dto::Simple &simple) {
