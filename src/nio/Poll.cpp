@@ -2,8 +2,11 @@
 #include <signal.h>
 #include <string.h>
 #include <cmath>
+#include <limits.h>
 
 const int YES = 1;
+const int DELETED = INT_MIN;
+const int COMPACTION_THRESHOLD = 3;
 
 Poll &Poll::subscribe(std::shared_ptr<Subscriber> sub) {
   if (sub->get_fd() >= 0)
@@ -22,15 +25,28 @@ void Poll::unsubscribe(Subscriber &sub) {
   this->subs.erase(it);
   for (auto &i: this->fds) { //TODO remove not needed fds
     if (i.fd == fd) {
-      i.fd *= -1;
+      i.fd = DELETED;
       if (i.fd == 0) i.fd = -1;
     }
   }
 }
 
+void Poll::compact() {
+  std::vector<pollfd> new_table;
+  for (int i = 0; i < fds.size(); ++i) {
+    auto fd = fds[i];
+    if (fd.fd != DELETED) {
+      new_table.push_back(fd);
+    }
+  }
+  this->fds = new_table;
+}
+
 void Poll::loop() {
   uint64_t time = current_time_millis();
   while (!this->shutdown && this->subs.size() > 0) {
+    if (this->fds.size() > COMPACTION_THRESHOLD * this->subs.size())
+      compact();
     int changed_fds = no_err(poll(&fds[0], fds.size(), WAIT_QUANTUM), "error in poll");
     if (changed_fds == 0 || current_time_millis() - time > WAIT_QUANTUM) { //Timeout occured
       time = current_time_millis();
@@ -59,9 +75,9 @@ void Poll::loop() {
           std::cout << (fd.revents ^ (POLLIN | POLLOUT)) << " " << fd.revents << std::endl;
           listener->on_error(*this, fd.revents);
         }
-      }catch (Error &e){
+      } catch (Error &e) {
         printf("Error in event loop %s listener=%s pollfd{ev=%d, fd=%d, revents=%d}\n",
-        e.what(), &listener->get_name()[0], fd.events, fd.fd, fd.revents);
+               e.what(), &listener->get_name()[0], fd.events, fd.fd, fd.revents);
       }
     }
   }
@@ -83,7 +99,6 @@ Poll &Poll::subscribe_alarm(std::shared_ptr<Alarm> alarm) {
   this->alarms[alarm->get_timeout_time()] = alarm;
   return *this;
 }
-
 void Poll::notify_subscriber_changed(Subscriber &listener) {
   if (!listener.is_dirty()) return;
   int initial_fd = abs(listener.get_fd());

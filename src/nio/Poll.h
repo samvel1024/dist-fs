@@ -22,6 +22,7 @@ class Poll {
   std::map<uint64_t, std::shared_ptr<Alarm>> alarms;
   bool shutdown;
 
+  void compact();
  public:
 
   Poll &subscribe(std::shared_ptr<Subscriber> sub);

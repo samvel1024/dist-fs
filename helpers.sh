@@ -83,5 +83,5 @@ function generate_shared_dir() {
 
 
 function start_test_server(){
-    generate_shared_dir ~/test/serverdir 10 && sikbuild && server "${C1[@]}" -f ~/test/serverdir -b ${SPACE}
+    generate_shared_dir ~/test/serverdir 10 && sikbuild && $1 server "${C1[@]}" -f ~/test/serverdir -b ${SPACE}
 }
