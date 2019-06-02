@@ -29,6 +29,7 @@ void CLIListener::on_input(Poll &p) {
   while ((read_sz = read(fd, &ch, 1)) == 1 && ch != '\n') {
     line += ch;
   }
+  std::cout << "Read command " << line << std::endl;
   std::vector<std::string> tokens;
   boost::split(tokens, line, boost::is_any_of(" "));
   if (tokens.empty() || tokens.size() > 2) {
@@ -42,6 +43,7 @@ void CLIListener::on_input(Poll &p) {
     print_prompt();
   }
   if (read_sz == 0) {//EOF reached
+    std::cout << "Reached EOF, terminating" << std::endl;
     p.do_shutdown();
   }
 }
@@ -166,7 +168,13 @@ int initialize_tcp(std::string host, std::string port) {
 }
 
 void CLIListener::on_fetch_result(Poll &p, dto::Complex &resp, sockaddr_in addr, std::string serv, uint16_t prt) {
-  int tcp_fd = initialize_tcp(get_ip(addr), std::to_string(resp.header.param));
+  int tcp_fd;
+  try {
+    tcp_fd = initialize_tcp(get_ip(addr), std::to_string(resp.header.param));
+  } catch (Error &er) {
+    std::cout << "Unknown error " << er.what() << std::endl;
+    return;
+  }
   fs::path path(out_dir);
   path /= fs::path(resp.payload);
   auto session = std::make_shared<FileReceiveSession>(path, [serv, prt](fs::path path) {
@@ -216,7 +224,13 @@ void CLIListener::on_upload_result(Poll &p, dto::Complex &dto, sockaddr_in ad, b
               << ") refused to store the file" << std::endl;
     return;
   }
-  int fd = initialize_tcp(&server[0], std::to_string(dto.header.param));
+  int fd;
+  try {
+    fd = initialize_tcp(&server[0], std::to_string(dto.header.param));
+  } catch (Error &er) {
+    std::cout << "Unknown error " << er.what() << std::endl;
+    return;
+  }
   auto session = std::make_shared<FileSendSession>(file);
   session->when_success([file, server, ad] {
     std::cout << "File " << file.string() << " uploaded  (" << server << ":" << ntohs(ad.sin_port) << ")" << std::endl;
