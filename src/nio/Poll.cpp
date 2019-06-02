@@ -71,7 +71,7 @@ void Poll::loop() {
         if (fd.revents & POLLOUT) {
           listener->on_output(*this);
         }
-        if (fd.revents & ~(POLLIN | POLLOUT)) {
+        if (fd.revents & !(POLLIN | POLLOUT)) {
           std::cout << "Error event from poll " << fd.revents << std::endl;
           listener->on_error(*this, fd.revents);
         }

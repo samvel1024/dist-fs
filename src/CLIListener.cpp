@@ -23,7 +23,12 @@ void print_prompt() {
   std::cout << "ENTER A COMMAND:" << std::endl;
 }
 
-// Reading in one word buffer since it needs more advanced buffering if the program is used with UNIX pipe
+void print_illegal() {
+  std::cout << "Illegal input, ignoring" << std::endl;
+}
+
+// Reading in one word buffer since it needs more advanced buffering
+// if the program is used with UNIX pipe or file redirection
 void CLIListener::on_input(Poll &p) {
   std::string line;
   char ch;
@@ -34,12 +39,17 @@ void CLIListener::on_input(Poll &p) {
   std::cout << "Read command " << line << std::endl;
   std::vector<std::string> tokens;
   boost::split(tokens, line, boost::is_any_of(" "));
-  if (tokens.empty() || tokens.size() > 2) {
-    std::cout << name << " :Illegal input, ignoring" << std::endl;
+  if (tokens.empty()) {
+    print_illegal();
     return;
   }
+  std::string arg;
+  if (tokens.size() > 1) {
+    for (int i = 1; i < tokens.size() - 1; ++i)
+      arg += tokens[i] + ' ';
+    arg += tokens[tokens.size() - 1];
+  }
   std::transform(tokens[0].begin(), tokens[0].end(), tokens[0].begin(), ::tolower);
-  std::string arg = tokens.size() == 2 ? tokens[1] : std::string();
   exec_command(p, tokens[0], arg);
   if (this->expected & POLLIN) {
     print_prompt();
@@ -54,7 +64,7 @@ void CLIListener::exec_command(Poll &p, std::string &type, std::string &arg) {
   int t = commands.find(type) == commands.end() ? -2 : commands[type];
   switch (t) {
     case -2: {
-      std::cout << name << " :Illegal input, ignoring" << std::endl;
+      print_illegal();
       break;
     }
     case -1: {
@@ -70,14 +80,26 @@ void CLIListener::exec_command(Poll &p, std::string &type, std::string &arg) {
       break;
     }
     case dto::Type::DOWNLOAD_REQ: {
+      if (arg.empty()) {
+        print_illegal();
+        return;
+      }
       this->do_fetch(p, arg);
       break;
     }
     case dto::Type::UPLOAD_REQ: {
+      if (arg.empty()) {
+        print_illegal();
+        return;
+      }
       this->do_upload(p, arg);
       break;
     }
     case dto::Type::DEL_REQ: {
+      if (arg.empty()) {
+        print_illegal();
+        return;
+      }
       this->do_delete(p, arg);
       break;
     }
@@ -112,7 +134,6 @@ void CLIListener::on_search_result(dto::Simple &resp, sockaddr_in addr) {
   std::vector<std::string> tokens;
   boost::split(tokens, resp.payload, boost::is_any_of("\n"));
   std::string ip = get_ip(addr);
-  //TODO take care of upload File Name.txt
   for (auto &f: tokens) {
     std::cout << f << " (" << ip << ")" << std::endl;
     this->file_server[f] = ip;
@@ -196,7 +217,7 @@ void CLIListener::on_fetch_result(Poll &p, dto::Complex &resp, sockaddr_in addr,
 
 void CLIListener::do_fetch(Poll &p, std::string &arg) {
   if (file_server.find(arg) == file_server.end()) {
-    //TODO print message;
+    std::cout << "Could not find a server to fetch from, execute search first" << std::endl;
     return;
   }
   if (file_server.find(arg) == file_server.end()) {
@@ -224,6 +245,12 @@ std::string CLIListener::get_largest_server() {
 }
 
 void CLIListener::on_upload_result(Poll &p, dto::Complex &dto, sockaddr_in ad, boost::filesystem::path file) {
+  std::string hdr = dto.header.cmd;
+  auto t = dto::from_header(hdr);
+  if (t == dto::Type::UPLOAD_RES_ERR){
+    std::cout << "NO_WAY response from server" << std::endl;
+    return;
+  }
   auto server = get_ip(ad);
   int fd;
   try {
