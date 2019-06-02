@@ -34,8 +34,7 @@ void Poll::loop() {
     int changed_fds = no_err(poll(&fds[0], fds.size(), WAIT_QUANTUM), "error in poll");
     if (changed_fds == 0 || current_time_millis() - time > WAIT_QUANTUM) { //Timeout occured
       time = current_time_millis();
-      uint64_t now = current_time_millis();
-      for (auto it = alarms.cbegin(); it != alarms.cend() && it->first <= now;) {
+      for (auto it = alarms.cbegin(); it != alarms.cend() && it->first <= time;) {
         it->second->on_timeout();
         alarms.erase(it++);
       }
@@ -49,15 +48,20 @@ void Poll::loop() {
         throw Error("No handler for fd %d", fd.fd);
       }
       std::shared_ptr<Subscriber> listener = listener_itr->second;
-      if (fd.events & POLLIN) {
-        listener->on_input(*this);
-      }
-      if (fd.events & POLLOUT) {
-        listener->on_output(*this);
-      }
-      if (fd.events & !(POLLIN | POLLOUT)) {
-        std::cout << (fd.events ^ (POLLIN | POLLOUT)) << " " << fd.events << std::endl;
-        listener->on_error(*this, fd.revents);
+      try {
+        if (fd.revents & POLLIN) {
+          listener->on_input(*this);
+        }
+        if (fd.revents & POLLOUT) {
+          listener->on_output(*this);
+        }
+        if (fd.revents & !(POLLIN | POLLOUT)) {
+          std::cout << (fd.revents ^ (POLLIN | POLLOUT)) << " " << fd.revents << std::endl;
+          listener->on_error(*this, fd.revents);
+        }
+      }catch (Error &e){
+        printf("Error in event loop %s listener=%s pollfd{ev=%d, fd=%d, revents=%d}\n",
+        e.what(), &listener->get_name()[0], fd.events, fd.fd, fd.revents);
       }
     }
   }

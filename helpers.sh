@@ -7,6 +7,11 @@ export MULTI_ADDR=239.13.41.5
 export MULTI_PORT=3000
 export SPACE=1000000000000000
 
+C1_CL=(
+    -g 239.13.41.15
+    -p 3000
+    -t 1
+)
 C1=(
     -g 239.13.41.15
     -p 3000

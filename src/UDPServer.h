@@ -8,9 +8,11 @@
 #include "nio/Subscriber.h"
 #include "Dto.h"
 #include "SharedDirectory.h"
+#include <queue>
 
 class UDPServer : public Subscriber {
  private:
+  typedef std::pair<std::string, sockaddr_in> Msg;
   static constexpr int buf_len = 2000;
   static constexpr int sockaddr_len = sizeof(sockaddr_in);
   struct sockaddr_in current_client;
@@ -19,6 +21,7 @@ class UDPServer : public Subscriber {
   const int timeout;
   const uint16_t port;
   const std::string mcast_addr;
+  std::queue<Msg> msg_queue;
 
   void route_request(Poll &p, int bytes_read);
 
@@ -37,6 +40,9 @@ class UDPServer : public Subscriber {
   void on_download(Poll &poll, dto::Simple &simple);
   void on_upload(Poll &poll, dto::Complex &complex);
   void on_delete(Poll &poll, dto::Simple &simple);
+  template<typename T>
+  void respond(Poll &p, T dto);
+  void on_output(Poll &p) override;
 };
 
 #endif //DISTFS_UDPSERVER_H

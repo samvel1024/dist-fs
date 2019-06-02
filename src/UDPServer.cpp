@@ -12,13 +12,11 @@
 #include "FileSendSession.h"
 #include "FileReceiveSession.h"
 
-constexpr int BUFSIZE = 1000;
 namespace fs = boost::filesystem;
 
 int connect_group(in_port_t port, const char *addr) {
   int sock = no_err(socket(AF_INET, SOCK_DGRAM, 0), "socket");
   u_int yes = 1;
-  //TODO check if works on linux
   no_err(setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, (char *) &yes, sizeof(yes)), "reuse");
   //Connect to group
   struct ip_mreq ip_mreq{};
@@ -37,7 +35,6 @@ int connect_group(in_port_t port, const char *addr) {
 }
 
 void UDPServer::on_input(Poll &p) {
-  //TODO support partial reads
   unsigned clientlen; /* byte size of client's address */
   clientlen = sizeof(current_client);
   int bytes_read = no_err(recvfrom(fd, &buffer[0], buffer.size(), 0,
@@ -53,11 +50,30 @@ T parse(std::string data) {
 }
 
 template<typename T>
-void respond(int sock, T dto, sockaddr_in addr) {
+void UDPServer::respond(Poll &p, T dto) {
   std::cout << "UDPServer: responding " << dto << std::endl;
   auto resp_str = dto::marshall(dto);
-  socklen_t len = sizeof(addr);
-  no_err(sendto(sock, &resp_str[0], resp_str.size(), 0, (struct sockaddr *) &addr, len), "Error in sendto");
+  msg_queue.emplace(std::make_pair(std::move(resp_str), current_client));
+  set_expected(POLLIN | POLLOUT);
+  p.notify_subscriber_changed(*this);
+}
+
+void UDPServer::on_output(Poll &p) {
+  if (msg_queue.empty()) {
+    set_expected(POLLIN);
+    p.notify_subscriber_changed(*this);
+    return;
+  }
+  auto msg = msg_queue.front();
+  msg_queue.pop();
+  socklen_t len = sizeof(msg.second);
+  if (msg.first.size() != sendto(fd, &msg.first[0], msg.first.size(), 0, (struct sockaddr *) &msg.second, len)) {
+    std::cout << "UDPServer: error in writing to udp socket " << from_errno() << std::endl;
+  }
+  if (msg_queue.empty()) {
+    set_expected(POLLIN);
+    p.notify_subscriber_changed(*this);
+  }
 }
 
 void UDPServer::route_request(Poll &p, int bytes_read) {
@@ -107,7 +123,7 @@ void UDPServer::on_hello(Poll &p, dto::Simple &msg) {
   }
   std::string mcast = this->mcast_addr;
   auto resp = dto::create(msg.header.cmd_seq, "GOOD_DAY", mcast, dir->get_remaining_space());
-  respond(fd, resp, current_client);
+  respond(p, resp);
 }
 
 void UDPServer::on_list(Poll &poll, dto::Simple &msg) {
@@ -118,7 +134,7 @@ void UDPServer::on_list(Poll &poll, dto::Simple &msg) {
   }
   auto resp = dto::create(msg.header.cmd_seq, "MY_LIST", resp_payload);
   //TODO need to split into packets
-  respond(fd, resp, current_client);
+  respond(poll, resp);
 }
 
 void UDPServer::on_download(Poll &poll, dto::Simple &simple) {
@@ -137,7 +153,7 @@ void UDPServer::on_download(Poll &poll, dto::Simple &simple) {
       poll.unsubscribe(*server.lock());
   });
   auto resp = dto::create(simple.header.cmd_seq, "CONNECT_ME", simple.payload, (uint64_t) tcp->get_port());
-  respond(fd, resp, current_client);
+  respond(poll, resp);
   std::cout << "UDPServer: created file download tcp server listening on port " << tcp->get_port() << std::endl;
 }
 
@@ -145,7 +161,7 @@ void UDPServer::on_upload(Poll &poll, dto::Complex &complex) {
   std::string file_name = complex.payload;
   if (!dir->can_create_file(complex.header.param, file_name)) {
     auto dto = dto::create(complex.header.cmd_seq, "NO_WAY", file_name);
-    respond(fd, dto, current_client);
+    respond(poll, dto);
     return;
   }
   dir->reserve_file(file_name, complex.header.param);
@@ -169,7 +185,7 @@ void UDPServer::on_upload(Poll &poll, dto::Complex &complex) {
   poll.subscribe_alarm(alarm);
   std::string nil;
   auto ok = dto::create(complex.header.cmd_seq, "CAN_ADD", nil, tcp->get_port());
-  respond(fd, ok, current_client);
+  respond(poll, ok);
   std::cout << "UDPServer: created file upload tcp server listening on port " << tcp->get_port() << std::endl;
 }
 
